@@ -95,7 +95,7 @@ const getSequenceLength = (level: number, isPractice: boolean): number => {
 // --- SPEECH UTILS (Inlined & Fixed for Android) ---
 let isAudioUnlocked = false;
 
-// Android often "pauses" the engine silently. We force resume it.
+// Android often "pauses" the speech engine silently. We force resume it.
 const resumeAudio = () => {
   if (window.speechSynthesis && window.speechSynthesis.paused) {
     window.speechSynthesis.resume();
@@ -756,8 +756,8 @@ const App: React.FC = () => {
             )}
 
             {(gameState === 'idle' || gameState === 'playing') && (
-              <div className={`relative flex justify-center transition-all duration-700 ${isZenMode && isPlaying ? 'scale-125 mb-16' : 'mb-8'} w-full`}>
-                 <div className={`grid grid-cols-3 gap-4 aspect-square w-full max-w-[85vw] sm:max-w-[440px] p-5 bg-slate-950/40 rounded-[3rem] border-2 transition-all duration-500 ${isPlaying ? 'border-indigo-500/30 ring-8 ring-indigo-500/5 shadow-[0_0_30px_rgba(99,102,241,0.1)]' : 'border-white/5 shadow-2xl'}`}>
+              <div className={`relative flex justify-center transition-all duration-700 ${isZenMode && isPlaying ? 'scale-100 mb-8 sm:scale-110 sm:mb-16' : 'mb-8'} w-full`}>
+                 <div className={`grid grid-cols-3 gap-3 sm:gap-4 aspect-square w-full max-w-[90vw] sm:max-w-[440px] p-5 bg-slate-950/40 rounded-[3rem] border-2 transition-all duration-500 ${isPlaying ? 'border-indigo-500/30 ring-8 ring-indigo-500/5 shadow-[0_0_30px_rgba(99,102,241,0.1)]' : 'border-white/5 shadow-2xl'}`}>
                     {[...Array(9)].map((_, i) => {
                       const isActive = gameState === 'idle' ? i === demoActive : activeStimulus?.pos === i;
                       const activeColor = activeStimulus?.col || '#6366f1';
@@ -779,13 +779,13 @@ const App: React.FC = () => {
               )}
               {gameState === 'playing' && (
                 <div className="space-y-6 w-full">
-                  <div className={`grid ${gameMode === 'position' ? 'grid-cols-1' : gameMode === 'dual' ? 'grid-cols-2' : 'grid-cols-3'} gap-4 w-full`}>
-                    <button onMouseDown={() => handlePositionClick()} disabled={currentIndex <= level} className={`relative rounded-[2rem] font-black transition-all border-2 active:scale-90 shadow-2xl ${buttonFeedback.position ? 'bg-indigo-400' : 'bg-indigo-600'} text-white outline-none border-transparent disabled:opacity-30 ${isZenMode && isPlaying ? 'py-12' : 'py-8'}`}><div className="flex flex-col items-center gap-2"><Square size={isZenMode && isPlaying ? 48 : 36} /><span className={`${isZenMode && isPlaying ? 'text-[13px]' : 'text-[11px]'} uppercase tracking-widest font-black`}>Konum</span></div></button>
+                  <div className={`grid ${gameMode === 'position' ? 'grid-cols-1' : gameMode === 'dual' ? 'grid-cols-2' : 'grid-cols-3'} gap-3 sm:gap-4 w-full`}>
+                    <button onMouseDown={() => handlePositionClick()} disabled={currentIndex <= level} className={`relative rounded-[2rem] font-black transition-all border-2 active:scale-95 shadow-2xl ${buttonFeedback.position ? 'bg-indigo-400' : 'bg-indigo-600'} text-white outline-none border-transparent disabled:opacity-30 ${isZenMode && isPlaying ? 'py-14' : 'py-10'}`}><div className="flex flex-col items-center gap-2"><Square size={isZenMode && isPlaying ? 52 : 42} /><span className={`${isZenMode && isPlaying ? 'text-[13px]' : 'text-xs'} uppercase tracking-widest font-black`}>Konum</span></div></button>
                     {(gameMode === 'dual' || gameMode === 'triple') && (
-                      <button onMouseDown={() => handleSoundClick()} disabled={currentIndex <= level} className={`relative rounded-[2rem] font-black transition-all border-2 active:scale-90 shadow-2xl ${buttonFeedback.sound ? 'bg-purple-400' : 'bg-purple-600'} text-white outline-none border-transparent disabled:opacity-30 ${isZenMode && isPlaying ? 'py-12' : 'py-8'}`}><div className="flex flex-col items-center gap-2"><Volume2 size={isZenMode && isPlaying ? 48 : 36} /><span className={`${isZenMode && isPlaying ? 'text-[13px]' : 'text-[11px]'} uppercase tracking-widest font-black`}>Ses</span></div></button>
+                      <button onMouseDown={() => handleSoundClick()} disabled={currentIndex <= level} className={`relative rounded-[2rem] font-black transition-all border-2 active:scale-95 shadow-2xl ${buttonFeedback.sound ? 'bg-purple-400' : 'bg-purple-600'} text-white outline-none border-transparent disabled:opacity-30 ${isZenMode && isPlaying ? 'py-14' : 'py-10'}`}><div className="flex flex-col items-center gap-2"><Volume2 size={isZenMode && isPlaying ? 52 : 42} /><span className={`${isZenMode && isPlaying ? 'text-[13px]' : 'text-xs'} uppercase tracking-widest font-black`}>Ses</span></div></button>
                     )}
                     {gameMode === 'triple' && (
-                      <button onMouseDown={() => handleColorClick()} disabled={currentIndex <= level} className={`relative rounded-[2rem] font-black transition-all border-2 active:scale-90 shadow-2xl ${buttonFeedback.color ? 'bg-emerald-400' : 'bg-emerald-600'} text-white outline-none border-transparent disabled:opacity-30 ${isZenMode && isPlaying ? 'py-12' : 'py-8'}`}><div className="flex flex-col items-center gap-2"><Palette size={isZenMode && isPlaying ? 48 : 36} /><span className={`${isZenMode && isPlaying ? 'text-[13px]' : 'text-[11px]'} uppercase tracking-widest font-black`}>Renk</span></div></button>
+                      <button onMouseDown={() => handleColorClick()} disabled={currentIndex <= level} className={`relative rounded-[2rem] font-black transition-all border-2 active:scale-95 shadow-2xl ${buttonFeedback.color ? 'bg-emerald-400' : 'bg-emerald-600'} text-white outline-none border-transparent disabled:opacity-30 ${isZenMode && isPlaying ? 'py-14' : 'py-10'}`}><div className="flex flex-col items-center gap-2"><Palette size={isZenMode && isPlaying ? 52 : 42} /><span className={`${isZenMode && isPlaying ? 'text-[13px]' : 'text-xs'} uppercase tracking-widest font-black`}>Renk</span></div></button>
                     )}
                   </div>
                   {!isZenMode && (
