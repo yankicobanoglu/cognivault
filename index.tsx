@@ -692,8 +692,8 @@ const App: React.FC = () => {
             )}
 
             {(gameState === 'idle' || gameState === 'playing') && (
-              <div className="relative flex justify-center transition-all duration-700 mb-8 w-full">
-                 <div className={`grid grid-cols-3 gap-4 aspect-square w-full p-5 bg-slate-950/40 rounded-[3rem] border-2 transition-all duration-500 ${isPlaying ? 'border-indigo-500/30 ring-8 ring-indigo-500/5 shadow-[0_0_30px_rgba(99,102,241,0.1)]' : 'border-white/5 shadow-2xl'}`}>
+              <div className={`relative flex justify-center transition-all duration-700 ${isZenMode && isPlaying ? 'scale-125 mb-16' : 'mb-8'} w-full`}>
+                 <div className={`grid grid-cols-3 gap-4 aspect-square w-full max-w-[320px] p-5 bg-slate-950/40 rounded-[3rem] border-2 transition-all duration-500 ${isPlaying ? 'border-indigo-500/30 ring-8 ring-indigo-500/5 shadow-[0_0_30px_rgba(99,102,241,0.1)]' : 'border-white/5 shadow-2xl'}`}>
                     {[...Array(9)].map((_, i) => {
                       const isActive = gameState === 'idle' ? i === demoActive : activeStimulus?.pos === i;
                       const activeColor = activeStimulus?.col || '#6366f1';
@@ -703,7 +703,7 @@ const App: React.FC = () => {
               </div>
             )}
 
-            <div className={`w-full transition-all duration-500 mx-auto ${isZenMode && isPlaying ? 'max-w-[340px] flex flex-col items-center' : ''}`}>
+            <div className={`w-full transition-all duration-500 mx-auto ${isZenMode && isPlaying ? 'max-w-[420px] flex flex-col items-center px-4' : ''}`}>
               {gameState === 'idle' && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full">
                   <button onClick={() => { startGame(false); }} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-6 rounded-[2rem] font-black text-2xl flex items-center justify-center gap-4 transition-all shadow-xl shadow-indigo-600/30 active:scale-95 group uppercase tracking-tight"><Play size={28} className="fill-white group-hover:scale-110 transition-transform" />Oyunu Başlat</button>
@@ -716,12 +716,12 @@ const App: React.FC = () => {
               {gameState === 'playing' && (
                 <div className="space-y-6 w-full">
                   <div className={`grid ${gameMode === 'position' ? 'grid-cols-1' : gameMode === 'dual' ? 'grid-cols-2' : 'grid-cols-3'} gap-4 w-full`}>
-                    <button onMouseDown={() => handlePositionClick()} disabled={currentIndex <= level} className={`relative py-8 rounded-[2rem] font-black transition-all border-2 active:scale-90 shadow-2xl ${buttonFeedback.position ? 'bg-indigo-400' : 'bg-indigo-600'} text-white outline-none border-transparent disabled:opacity-30`}><div className="flex flex-col items-center gap-2"><Square size={36} /><span className="text-[11px] uppercase tracking-widest font-black">Konum</span></div></button>
+                    <button onMouseDown={() => handlePositionClick()} disabled={currentIndex <= level} className={`relative rounded-[2rem] font-black transition-all border-2 active:scale-90 shadow-2xl ${buttonFeedback.position ? 'bg-indigo-400' : 'bg-indigo-600'} text-white outline-none border-transparent disabled:opacity-30 ${isZenMode && isPlaying ? 'py-12' : 'py-8'}`}><div className="flex flex-col items-center gap-2"><Square size={isZenMode && isPlaying ? 48 : 36} /><span className={`${isZenMode && isPlaying ? 'text-[13px]' : 'text-[11px]'} uppercase tracking-widest font-black`}>Konum</span></div></button>
                     {(gameMode === 'dual' || gameMode === 'triple') && (
-                      <button onMouseDown={() => handleSoundClick()} disabled={currentIndex <= level} className={`relative py-8 rounded-[2rem] font-black transition-all border-2 active:scale-90 shadow-2xl ${buttonFeedback.sound ? 'bg-purple-400' : 'bg-purple-600'} text-white outline-none border-transparent disabled:opacity-30`}><div className="flex flex-col items-center gap-2"><Volume2 size={36} /><span className="text-[11px] uppercase tracking-widest font-black">Ses</span></div></button>
+                      <button onMouseDown={() => handleSoundClick()} disabled={currentIndex <= level} className={`relative rounded-[2rem] font-black transition-all border-2 active:scale-90 shadow-2xl ${buttonFeedback.sound ? 'bg-purple-400' : 'bg-purple-600'} text-white outline-none border-transparent disabled:opacity-30 ${isZenMode && isPlaying ? 'py-12' : 'py-8'}`}><div className="flex flex-col items-center gap-2"><Volume2 size={isZenMode && isPlaying ? 48 : 36} /><span className={`${isZenMode && isPlaying ? 'text-[13px]' : 'text-[11px]'} uppercase tracking-widest font-black`}>Ses</span></div></button>
                     )}
                     {gameMode === 'triple' && (
-                      <button onMouseDown={() => handleColorClick()} disabled={currentIndex <= level} className={`relative py-8 rounded-[2rem] font-black transition-all border-2 active:scale-90 shadow-2xl ${buttonFeedback.color ? 'bg-emerald-400' : 'bg-emerald-600'} text-white outline-none border-transparent disabled:opacity-30`}><div className="flex flex-col items-center gap-2"><Palette size={36} /><span className="text-[11px] uppercase tracking-widest font-black">Renk</span></div></button>
+                      <button onMouseDown={() => handleColorClick()} disabled={currentIndex <= level} className={`relative rounded-[2rem] font-black transition-all border-2 active:scale-90 shadow-2xl ${buttonFeedback.color ? 'bg-emerald-400' : 'bg-emerald-600'} text-white outline-none border-transparent disabled:opacity-30 ${isZenMode && isPlaying ? 'py-12' : 'py-8'}`}><div className="flex flex-col items-center gap-2"><Palette size={isZenMode && isPlaying ? 48 : 36} /><span className={`${isZenMode && isPlaying ? 'text-[13px]' : 'text-[11px]'} uppercase tracking-widest font-black`}>Renk</span></div></button>
                     )}
                   </div>
                   {!isZenMode && (
