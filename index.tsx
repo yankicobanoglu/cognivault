@@ -7,7 +7,7 @@ import {
   Flame, Star, ZapOff, Trash2
 } from 'lucide-react';
 
-// --- TYPES ---
+// --- TYPES (Inlined) ---
 type GameMode = 'position' | 'dual' | 'triple';
 type GameState = 'idle' | 'playing' | 'finished' | 'analytics';
 type GameSpeed = 'slow' | 'normal' | 'fast';
@@ -70,7 +70,7 @@ interface UserStats {
   bestN: number;
 }
 
-// --- CONSTANTS ---
+// --- CONSTANTS (Inlined) ---
 const LETTERS = ['A', 'E', 'İ', 'O', 'U', 'C', 'T', 'S', 'Y'];
 const COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7', '#f97316', '#06b6d4', '#ec4899', '#f8fafc'];
 const SPEED_SETTINGS: Record<string, number> = { slow: 3500, normal: 2500, fast: 1500 };
@@ -92,7 +92,7 @@ const getSequenceLength = (level: number, isPractice: boolean): number => {
   return 30;
 };
 
-// --- SPEECH UTILS (INLINE FOR ANDROID COMPATIBILITY) ---
+// --- SPEECH UTILS (Inlined & Fixed for Android) ---
 let isAudioUnlocked = false;
 
 // Android often "pauses" the engine silently. We force resume it.
@@ -190,7 +190,7 @@ const loadVoices = (callback: (voice: SpeechSynthesisVoice | null) => void) => {
   };
 };
 
-// --- UTILS ---
+// --- SEQUENCE UTILS (Inlined) ---
 const mulberry32 = (a: number) => () => {
   let t = a += 0x6D2B79F5;
   t = Math.imul(t ^ t >>> 15, t | 1);
@@ -303,6 +303,7 @@ const generateSequence = (level: number, mode: GameMode, length: number, seed?: 
   return seq;
 };
 
+// --- COMPONENTS ---
 const NeuralMesh: React.FC<{ combo: number }> = ({ combo }) => {
   const intensity = Math.min(combo / 10, 1);
   const pulseDuration = 4 - (intensity * 3);
@@ -756,7 +757,7 @@ const App: React.FC = () => {
 
             {(gameState === 'idle' || gameState === 'playing') && (
               <div className={`relative flex justify-center transition-all duration-700 ${isZenMode && isPlaying ? 'scale-125 mb-16' : 'mb-8'} w-full`}>
-                 <div className={`grid grid-cols-3 gap-4 aspect-square w-full max-w-[320px] p-5 bg-slate-950/40 rounded-[3rem] border-2 transition-all duration-500 ${isPlaying ? 'border-indigo-500/30 ring-8 ring-indigo-500/5 shadow-[0_0_30px_rgba(99,102,241,0.1)]' : 'border-white/5 shadow-2xl'}`}>
+                 <div className={`grid grid-cols-3 gap-4 aspect-square w-full max-w-[85vw] sm:max-w-[440px] p-5 bg-slate-950/40 rounded-[3rem] border-2 transition-all duration-500 ${isPlaying ? 'border-indigo-500/30 ring-8 ring-indigo-500/5 shadow-[0_0_30px_rgba(99,102,241,0.1)]' : 'border-white/5 shadow-2xl'}`}>
                     {[...Array(9)].map((_, i) => {
                       const isActive = gameState === 'idle' ? i === demoActive : activeStimulus?.pos === i;
                       const activeColor = activeStimulus?.col || '#6366f1';
