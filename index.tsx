@@ -312,6 +312,11 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('cognivault_history', JSON.stringify(history)); }, [history]);
   useEffect(() => { localStorage.setItem('cognivault_stats', JSON.stringify(userStats)); }, [userStats]);
 
+  const primeAudio = () => {
+    const utterance = new SpeechSynthesisUtterance("");
+    window.speechSynthesis.speak(utterance);
+  };
+
   const removeAllProgress = () => {
     if (window.confirm("Tüm ilerlemeniz, TP puanlarınız ve geçmişiniz kalıcı olarak silinecektir. Emin misiniz?")) {
       localStorage.clear();
@@ -319,6 +324,10 @@ const App: React.FC = () => {
       setUserStats({ xp: 0, streak: 0, lastPlayed: 0, rank: RANKS[0].name, bestN: 1 });
       setLevel(1);
       setGameMode('position');
+      setSpeed('normal');
+      setIsPractice(false);
+      setIsMarathon(false);
+      setIsZenMode(false);
       setGameState('idle');
       triggerHaptic('error');
     }
@@ -347,10 +356,14 @@ const App: React.FC = () => {
     const pos = calcMod(userPositionInputs.current, positionMatches);
     const snd = calcMod(userSoundInputs.current, soundMatches);
     const col = calcMod(userColorInputs.current, colorMatches);
+    
     const totalCorrect = pos.correct + (gameMode !== 'position' ? snd.correct : 0) + (gameMode === 'triple' ? col.correct : 0);
     const totalPossible = pos.totalPossible + (gameMode !== 'position' ? snd.totalPossible : 0) + (gameMode === 'triple' ? col.totalPossible : 0);
     const totalFalseAlarms = pos.falseAlarms + (gameMode !== 'position' ? snd.falseAlarms : 0) + (gameMode === 'triple' ? col.falseAlarms : 0);
-    const percentage = Math.max(0, Math.round(totalPossible > 0 ? ((totalCorrect - (totalFalseAlarms * 1.5)) / totalPossible) * 100 : 0));
+    
+    // UI/UX Change: Calculate achievement based on number of correct matches over total possible matches
+    const percentage = Math.max(0, Math.round(totalPossible > 0 ? (totalCorrect / totalPossible) * 100 : 0));
+    
     return { position: pos, sound: snd, color: col, overall: { percentage, totalCorrect, totalMissed: 0, totalFalseAlarms } };
   }, [gameMode, positionMatches, soundMatches, colorMatches, sequence.length]);
 
@@ -358,12 +371,18 @@ const App: React.FC = () => {
     window.speechSynthesis.cancel();
     const details = calculateFinalScore();
     const percentage = details.overall.percentage;
-    const totalXP = Math.round(percentage * 2 * (XP_MULTIPLIERS[gameMode] || 1) * (XP_MULTIPLIERS[speed] || 1) * (1 + (level * 0.2)));
+    const baseXP = percentage * 2;
+    const modeMult = XP_MULTIPLIERS[gameMode] || 1;
+    const speedMult = XP_MULTIPLIERS[speed] || 1;
+    const levelMult = 1 + (level * 0.2);
+    const totalXP = Math.round(baseXP * modeMult * speedMult * levelMult);
+
     const today = new Date().setHours(0,0,0,0);
     let newStreak = userStats.streak;
     if (userStats.lastPlayed === today - 86400000) newStreak += 1;
     else if (userStats.lastPlayed < today - 86400000) newStreak = 1;
     else if (userStats.lastPlayed === 0) newStreak = 1;
+
     const record: SessionRecord = { id: Date.now().toString(), date: Date.now(), level, mode: gameMode, score: percentage, xpEarned: totalXP, details, reactionTimes: reactionTimes.current, isDaily: isDailyChallenge };
     setHistory(prev => [record, ...prev].slice(0, 100));
     setUserStats(prev => ({ ...prev, xp: prev.xp + totalXP, streak: newStreak, lastPlayed: today, bestN: Math.max(prev.bestN, percentage > 85 ? level : prev.bestN) }));
@@ -375,7 +394,7 @@ const App: React.FC = () => {
 
     // Automatic Progression Logic
     if (percentage >= 90 && !isPractice && !isMarathon) {
-        if (level < 5) {
+        if (level < 9) {
             setLevel(prev => prev + 1);
         } else {
             if (gameMode === 'position') {
@@ -392,6 +411,7 @@ const App: React.FC = () => {
   }, [calculateFinalScore, level, gameMode, isDailyChallenge, userStats, speed, isPractice, isMarathon]);
 
   const startGame = (isDaily = false) => {
+    primeAudio();
     setIsDailyChallenge(isDaily);
     const len = getSequenceLength(level, isPractice || isMarathon);
     const seed = isDaily ? new Date().setHours(0,0,0,0) : undefined;
@@ -479,14 +499,39 @@ const App: React.FC = () => {
     else { setCombo(0); if (isMarathon) finishGame(); }
   };
 
-  const startTutorial = () => { setTutorialStep('welcome'); setGameState('idle'); setTutorialSuccess(false); triggerHaptic('medium'); };
+  const resetGame = () => {
+    window.speechSynthesis.cancel();
+    setGameState('idle');
+    triggerHaptic('light');
+  };
+
+  const startTutorial = () => { primeAudio(); setTutorialStep('welcome'); setGameState('idle'); setTutorialSuccess(false); triggerHaptic('medium'); };
+  
   const nextTutorialStep = () => {
     triggerHaptic('light');
-    if (tutorialStep === 'welcome') { setTutorialStep('demo_step_1'); setTutorialActiveSquare(4); }
-    else if (tutorialStep === 'demo_step_1') { setTutorialStep('demo_step_2'); setTutorialActiveSquare(1); }
-    else if (tutorialStep === 'demo_step_2') { setTutorialStep('demo_step_3'); setTutorialActiveSquare(4); setTutorialSuccess(false); }
-    else if (tutorialStep === 'demo_step_3') setTutorialStep('ready');
-    else if (tutorialStep === 'ready') { setTutorialStep(null); startGame(); }
+    if (tutorialStep === 'welcome') { 
+      setTutorialStep('demo_step_1'); 
+      setTutorialActiveSquare(4); 
+    }
+    else if (tutorialStep === 'demo_step_1') { 
+      setTutorialStep('demo_step_2'); 
+      setTutorialActiveSquare(4); // Keep same for N=1 logic demo
+    }
+    else if (tutorialStep === 'demo_step_2') { 
+      setTutorialStep('demo_step_3'); 
+      setTutorialActiveSquare(4); 
+      setTutorialSuccess(false); 
+    }
+    else if (tutorialStep === 'demo_step_3') {
+      setTutorialStep('ready');
+    }
+    else if (tutorialStep === 'ready') { 
+      // UI/UX Change: Start an N=1 game with Position only mode after tutorial
+      setTutorialStep(null); 
+      setLevel(1);
+      setGameMode('position');
+      startGame(); 
+    }
   };
 
   useEffect(() => {
@@ -546,11 +591,13 @@ const App: React.FC = () => {
             <div className="flex flex-col items-center">
                <div className="p-5 bg-indigo-500/20 rounded-[2rem] mb-6 shadow-inner ring-1 ring-white/10"><HelpCircle className="text-indigo-400" size={48} /></div>
                <div className="space-y-4 text-center mb-8">
-                <h2 className="text-3xl font-black text-white leading-tight">{tutorialStep === 'welcome' ? 'Akademi Protokolü' : tutorialStep === 'ready' ? 'Göreve Hazır' : 'Zihin Eğitimi'}</h2>
+                {/* UI/UX Change: Header renamed */}
+                <h2 className="text-3xl font-black text-white leading-tight uppercase tracking-wider">{tutorialStep === 'welcome' ? 'Nasıl Oynanır' : tutorialStep === 'ready' ? 'Göreve Hazır' : 'Zihin Eğitimi'}</h2>
                 <div className="text-slate-400 text-sm leading-relaxed px-2">
+                  {/* UI/UX Change: Explanations focused on N=1 */}
                   {tutorialStep === 'welcome' && "Hoş geldiniz. Bu protokol çalışma belleği kapasitenizi hızla artırır. Kalibrasyona başlayalım."}
                   {tutorialStep === 'demo_step_1' && "Bu aşamada karelerin konumuna odaklanın. N=1 için sadece 1 adım öncesini kontrol ederiz."}
-                  {tutorialStep === 'demo_step_2' && "Her yeni karede, önceki karenin nerede olduğunu hatırlamaya çalışın."}
+                  {tutorialStep === 'demo_step_2' && "Her yeni karede, az önceki karenin nerede olduğunu hatırlamaya çalışın."}
                   {tutorialStep === 'demo_step_3' && (
                     <div className="flex flex-col items-center gap-4">
                       <span>N=1 modunda, mevcut kare az önceki kareyle aynı yerdeyse KONUM butonuna basın!</span>
@@ -626,6 +673,7 @@ const App: React.FC = () => {
                     ))}
                  </div>
               </div>
+              {/* Data Reset Button Implementation */}
               <button 
                 onClick={(e) => { e.stopPropagation(); removeAllProgress(); }} 
                 className="w-full py-5 rounded-[1.5rem] bg-rose-600/10 text-rose-500 font-black text-xs flex items-center justify-center gap-2 border border-rose-500/20 active:scale-95 hover:bg-rose-600 hover:text-white transition-all shadow-lg"
@@ -635,7 +683,8 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {gameState !== 'analytics' && (
+        {/* UI/UX Change: Hide Grid on Finished State */}
+        {gameState !== 'analytics' && gameState !== 'finished' && (
           <div className={`transition-all duration-700 ${isZenMode && isPlaying ? 'items-center gap-12' : 'bg-slate-900/30 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 shadow-2xl'}`}>
             {gameState === 'idle' && (
               <div className="space-y-6 mb-8 animate-in fade-in duration-500">
@@ -643,7 +692,7 @@ const App: React.FC = () => {
                   <div className="space-y-2">
                     <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Target size={14} className="text-indigo-500" /> Zorluk Derecesi</label>
                     <div className="flex p-1.5 bg-slate-800/40 rounded-2xl border border-white/5">
-                      {[1, 2, 3, 4, 5].map((l) => (
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].slice(0, 5).map((l) => (
                         <button key={l} onClick={() => { setLevel(l); triggerHaptic('light'); }} className={`flex-1 py-2 rounded-xl font-black text-sm transition-all active:scale-90 ${level === l ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400'}`}>{l}</button>
                       ))}
                     </div>
@@ -675,13 +724,13 @@ const App: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <button onClick={() => { setIsZenMode(!isZenMode); triggerHaptic('light'); }} className={`flex-1 py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all active:scale-95 outline-none border-none ${isZenMode ? 'bg-indigo-500/20 text-indigo-200' : 'bg-slate-800/30 text-slate-400'}`}><EyeOff size={16} /> Zen Modu</button>
-                  <button onClick={() => { speakLetter(LETTERS[testSoundIndex], voiceRef.current); setTestSoundIndex(p => (p + 1) % LETTERS.length); triggerHaptic('light'); }} className="flex-1 py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 border bg-slate-800/30 border-white/5 text-slate-400 outline-none active:scale-95 transition-all"><Volume2 size={16} /> Ses Kontrol</button>
+                  <button onClick={() => { triggerHaptic('light'); setIsZenMode(!isZenMode); }} className={`flex-1 py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all active:scale-95 outline-none border-none ${isZenMode ? 'bg-indigo-500/20 text-indigo-200' : 'bg-slate-800/30 text-slate-400'}`}><EyeOff size={16} /> Zen Modu</button>
+                  <button onClick={() => { primeAudio(); speakLetter(LETTERS[testSoundIndex], voiceRef.current); setTestSoundIndex(p => (p + 1) % LETTERS.length); triggerHaptic('light'); }} className="flex-1 py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 border bg-slate-800/30 border-white/5 text-slate-400 outline-none active:scale-95 transition-all"><Volume2 size={16} /> Ses Kontrol</button>
                 </div>
               </div>
             )}
 
-            {(gameState === 'idle' || gameState === 'playing' || gameState === 'finished') && (
+            {(gameState === 'idle' || gameState === 'playing') && (
               <div className={`relative flex justify-center transition-all duration-700 ${isZenMode && isPlaying ? 'scale-125 mb-16' : 'mb-8'}`}>
                  <div className={`grid grid-cols-3 gap-4 aspect-square w-full max-w-[320px] p-5 bg-slate-950/40 rounded-[3rem] border-2 transition-all duration-500 ${isPlaying ? 'border-indigo-500/30 shadow-[0_0_30px_rgba(99,102,241,0.1)]' : 'border-white/5 shadow-2xl'}`}>
                     {[...Array(9)].map((_, i) => {
@@ -693,10 +742,11 @@ const App: React.FC = () => {
               </div>
             )}
 
-            <div className={`w-full transition-all duration-500 ${isZenMode && isPlaying ? 'max-w-[340px]' : ''}`}>
+            {/* UI/UX Change: Fixed alignment in Zen mode by adding mx-auto and w-full */}
+            <div className={`w-full transition-all duration-500 mx-auto ${isZenMode && isPlaying ? 'max-w-[340px]' : ''}`}>
               {gameState === 'idle' && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <button onClick={() => { triggerHaptic('medium'); startGame(false); }} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-6 rounded-[2rem] font-black text-2xl flex items-center justify-center gap-4 transition-all shadow-xl shadow-indigo-600/30 active:scale-95 group"><Play size={28} className="fill-white group-hover:scale-110 transition-transform" />Oyunu Başlat</button>
+                  <button onClick={() => { triggerHaptic('medium'); startGame(false); }} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-6 rounded-[2rem] font-black text-2xl flex items-center justify-center gap-4 transition-all shadow-xl shadow-indigo-600/30 active:scale-95 group uppercase tracking-tight"><Play size={28} className="fill-white group-hover:scale-110 transition-transform" />Oyunu Başlat</button>
                   <div className="grid grid-cols-2 gap-3">
                     <button onClick={() => { triggerHaptic('medium'); startGame(true); }} className="bg-emerald-600 hover:bg-emerald-500 text-white py-5 rounded-[1.5rem] font-black text-sm flex flex-col items-center justify-center gap-1 shadow-lg active:scale-95"><Calendar size={20} /> Günlük Meydan Okuma</button>
                     <button onClick={() => { setGameState('analytics'); triggerHaptic('light'); }} className="bg-slate-800 hover:bg-slate-700 text-slate-300 py-5 rounded-[1.5rem] font-black text-sm flex flex-col items-center justify-center gap-1 border border-white/10 active:scale-95"><BarChart3 size={20} /> Geçmiş</button>
@@ -723,27 +773,31 @@ const App: React.FC = () => {
                   <button onClick={() => { triggerHaptic('medium'); finishGame(); }} className="w-full py-5 rounded-[2rem] bg-rose-600/10 text-rose-500 font-black text-sm flex items-center justify-center gap-2 border border-rose-500/20 active:scale-95 outline-none"><ZapOff size={20} /> Oyunu Bitir</button>
                 </div>
               )}
-              {gameState === 'finished' && scoreDetails && (
-                <div className="space-y-6 animate-in zoom-in-95 duration-500 text-center py-8">
-                  <div className="bg-slate-950/60 p-10 rounded-[3rem] border border-white/10 shadow-inner">
-                    <h2 className="text-3xl font-black text-indigo-400 mb-2">{scoreDetails.overall.percentage >= 90 ? 'Mükemmel Seans!' : 'Seans Tamamlandı'}</h2>
-                    <div className="text-8xl font-black text-white my-8 tracking-tighter">{scoreDetails.overall.percentage}<span className="text-indigo-500 text-4xl">%</span></div>
-                    <div className="flex justify-center gap-4 text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]"><span className="flex items-center gap-1"><CheckCircle2 size={12} className="text-emerald-500" /> {scoreDetails.overall.totalCorrect} DOĞRU</span><span className="flex items-center gap-1"><ZapOff size={12} className="text-rose-500" /> {scoreDetails.overall.totalFalseAlarms} HATA</span></div>
-                  </div>
-                  <button onClick={() => { window.speechSynthesis.cancel(); setGameState('idle'); triggerHaptic('light'); }} className="w-full bg-indigo-600 text-white py-6 rounded-[2rem] font-black text-xl flex items-center justify-center gap-4 active:scale-95 shadow-lg"><RotateCcw size={24} /> Menüye Dön</button>
-                </div>
-              )}
             </div>
           </div>
         )}
+
+        {/* Finished State Screen (Achievement Calculation Fix Applied) */}
+        {gameState === 'finished' && scoreDetails && (
+          <div className="w-full max-w-xl mx-auto space-y-6 animate-in zoom-in-95 duration-500 text-center py-8">
+            <div className="bg-slate-950/60 p-10 rounded-[3rem] border border-white/10 shadow-inner relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-5 rotate-12"><Trophy size={140} /></div>
+              <h2 className="text-3xl font-black text-indigo-400 mb-2 uppercase tracking-tight">{scoreDetails.overall.percentage >= 90 ? 'Mükemmel Seans!' : 'Seans Tamamlandı'}</h2>
+              <div className="text-8xl font-black text-white my-8 tracking-tighter">{scoreDetails.overall.percentage}<span className="text-indigo-500 text-4xl">%</span></div>
+              <div className="flex justify-center gap-4 text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]"><span className="flex items-center gap-1"><CheckCircle2 size={12} className="text-emerald-500" /> {scoreDetails.overall.totalCorrect} DOĞRU</span><span className="flex items-center gap-1"><ZapOff size={12} className="text-rose-500" /> {scoreDetails.overall.totalFalseAlarms} HATA</span></div>
+            </div>
+            <button onClick={() => { window.speechSynthesis.cancel(); setGameState('idle'); triggerHaptic('light'); }} className="w-full bg-indigo-600 text-white py-6 rounded-[2rem] font-black text-xl flex items-center justify-center gap-4 active:scale-95 shadow-lg"><RotateCcw size={24} /> Menüye Dön</button>
+          </div>
+        )}
+
         {(!isZenMode || !isPlaying) && gameState === 'idle' && (
           <div className="bg-slate-900/20 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white/5 shadow-xl animate-in slide-in-from-bottom-4 duration-700 delay-200">
              <h3 className="text-white text-xs font-black uppercase tracking-widest mb-6 flex items-center gap-2 opacity-70"><Info size={14} className="text-indigo-400" /> Seçili Oyun Ayarları</h3>
              <div className="space-y-4">
                {dynamicExplanations.map((exp, idx) => (
-                 <div key={idx} className="flex items-center gap-4 animate-in fade-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${idx * 100}ms` }}>
-                    <div className="p-1 bg-white/5 rounded-lg shrink-0 flex items-center justify-center">{exp.icon}</div>
-                    <span className="text-slate-400 text-[11px] font-bold leading-relaxed">{exp.text}</span>
+                 <div key={idx} className="flex flex-row items-center gap-4 animate-in fade-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${idx * 100}ms` }}>
+                    <div className="p-1 bg-white/5 rounded-lg shrink-0 flex items-center justify-center border border-white/5">{exp.icon}</div>
+                    <span className="text-slate-400 text-[11px] font-bold leading-tight">{exp.text}</span>
                  </div>
                ))}
              </div>
