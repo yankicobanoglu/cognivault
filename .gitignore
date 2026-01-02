@@ -1,5 +1,4 @@
 utils
-.gitignore
 README.md
 constants.ts
 package.json
