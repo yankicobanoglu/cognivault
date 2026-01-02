@@ -686,13 +686,13 @@ const App: React.FC = () => {
                 </div>
                 <div className="flex gap-4">
                   <button onClick={() => { setIsZenMode(!isZenMode); triggerHaptic('light'); }} className={`flex-1 py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all active:scale-95 border ${isZenMode ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-200' : 'bg-slate-800/30 border-white/5 text-slate-400'}`}><EyeOff size={16} /> Zen Modu</button>
-                  <button onClick={() => { speakLetter(LETTERS[testSoundIndex], voiceRef.current); setTestSoundIndex(p => (p + 1) % LETTERS.length); triggerHaptic('light'); }} className="flex-1 py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 border bg-slate-800/30 border-white/5 text-slate-400 active:scale-95 transition-all transition-all"><Volume2 size={16} /> Ses Kontrol</button>
+                  <button onClick={() => { speakLetter(LETTERS[testSoundIndex], voiceRef.current); setTestSoundIndex(p => (p + 1) % LETTERS.length); triggerHaptic('light'); }} className="flex-1 py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 border bg-slate-800/30 border-white/5 text-slate-400 active:scale-95 transition-all"><Volume2 size={16} /> Ses Kontrol</button>
                 </div>
               </div>
             )}
 
             {(gameState === 'idle' || gameState === 'playing') && (
-              <div className="relative flex justify-center transition-all duration-700 mb-8 w-full max-w-[320px]">
+              <div className="relative flex justify-center transition-all duration-700 mb-8 w-full">
                  <div className={`grid grid-cols-3 gap-4 aspect-square w-full p-5 bg-slate-950/40 rounded-[3rem] border-2 transition-all duration-500 ${isPlaying ? 'border-indigo-500/30 ring-8 ring-indigo-500/5 shadow-[0_0_30px_rgba(99,102,241,0.1)]' : 'border-white/5 shadow-2xl'}`}>
                     {[...Array(9)].map((_, i) => {
                       const isActive = gameState === 'idle' ? i === demoActive : activeStimulus?.pos === i;
