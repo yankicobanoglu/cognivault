@@ -92,6 +92,104 @@ const getSequenceLength = (level: number, isPractice: boolean): number => {
   return 30;
 };
 
+// --- SPEECH UTILS (INLINE FOR ANDROID COMPATIBILITY) ---
+let isAudioUnlocked = false;
+
+// Android often "pauses" the engine silently. We force resume it.
+const resumeAudio = () => {
+  if (window.speechSynthesis && window.speechSynthesis.paused) {
+    window.speechSynthesis.resume();
+  }
+};
+
+const unlockAudio = () => {
+  if (isAudioUnlocked) return;
+  
+  const synth = window.speechSynthesis;
+  if (!synth) return;
+
+  // On Android, 0 volume is sometimes optimized out. 0.1 ensures the audio channel opens.
+  const utterance = new SpeechSynthesisUtterance(" ");
+  utterance.volume = 0.1; 
+  utterance.rate = 1;
+  utterance.pitch = 1;
+  
+  resumeAudio();
+  synth.cancel();
+  synth.speak(utterance);
+  isAudioUnlocked = true;
+};
+
+const speakLetter = (letter: string, voice?: SpeechSynthesisVoice | null) => {
+  const synth = window.speechSynthesis;
+  if (!synth) return;
+  
+  resumeAudio();
+
+  // Crucial for Android: A tiny delay after cancel prevents the engine from crashing
+  // when commands are sent too fast.
+  synth.cancel();
+
+  setTimeout(() => {
+    let rate = 0.7;
+    if (['A', 'O', 'U'].includes(letter)) rate = 0.85;
+    else if (['E', 'İ'].includes(letter)) rate = 0.8;
+
+    const text = PHONETIC_MAP[letter] || letter.toLowerCase();
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    utterance.lang = 'tr-TR';
+    if (voice) utterance.voice = voice;
+    
+    utterance.rate = rate;
+    utterance.volume = 1.0;
+    utterance.pitch = 1.0;
+    
+    utterance.onerror = (e) => {
+      // If error occurs, try to reset engine
+      console.warn("Audio Error", e);
+      synth.cancel();
+      resumeAudio();
+    };
+
+    synth.speak(utterance);
+  }, 50);
+};
+
+const loadVoices = (callback: (voice: SpeechSynthesisVoice | null) => void) => {
+  const synth = window.speechSynthesis;
+  if (!synth) return;
+
+  let attempts = 0;
+  
+  const findVoice = () => {
+    const voices = synth.getVoices();
+    if (voices.length > 0) {
+      const turkishVoice = voices.find(v => v.lang === 'tr-TR' || v.lang === 'tr_TR') 
+                        || voices.find(v => v.lang.startsWith('tr'));
+      callback(turkishVoice || null);
+      return true;
+    }
+    return false;
+  };
+  
+  if (findVoice()) return;
+
+  // Android loads voices asynchronously and onvoiceschanged is unreliable on some versions
+  // We poll for 2 seconds to ensure we catch them when they load.
+  const intervalId = setInterval(() => {
+    attempts++;
+    if (findVoice() || attempts > 20) {
+      clearInterval(intervalId);
+    }
+  }, 100);
+
+  synth.onvoiceschanged = () => {
+    findVoice();
+    clearInterval(intervalId);
+  };
+};
+
 // --- UTILS ---
 const mulberry32 = (a: number) => () => {
   let t = a += 0x6D2B79F5;
@@ -205,35 +303,6 @@ const generateSequence = (level: number, mode: GameMode, length: number, seed?: 
   return seq;
 };
 
-const speakLetter = (letter: string, voice?: SpeechSynthesisVoice | null) => {
-  const synth = window.speechSynthesis;
-  synth.cancel();
-  
-  const text = PHONETIC_MAP[letter] || letter.toLowerCase();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'tr-TR';
-  
-  if (voice) {
-    utterance.voice = voice;
-  } else {
-    const voices = synth.getVoices();
-    const trVoice = voices.find(v => v.lang.toLowerCase().includes('tr'));
-    if (trVoice) utterance.voice = trVoice;
-  }
-
-  let rate = 0.75;
-  if (['A', 'O', 'U'].includes(letter)) rate = 0.85;
-  else if (['E', 'İ'].includes(letter)) rate = 0.8;
-  
-  utterance.rate = rate;
-  utterance.volume = 1.0;
-  utterance.pitch = 1.0;
-  
-  setTimeout(() => {
-    synth.speak(utterance);
-  }, 35);
-};
-
 const NeuralMesh: React.FC<{ combo: number }> = ({ combo }) => {
   const intensity = Math.min(combo / 10, 1);
   const pulseDuration = 4 - (intensity * 3);
@@ -290,7 +359,6 @@ const App: React.FC = () => {
   const [demoActive, setDemoActive] = useState<number | null>(null);
   const [demoButtonPressed, setDemoButtonPressed] = useState(false);
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
-  const audioPrimed = useRef(false);
 
   const triggerHaptic = (type: 'light' | 'medium' | 'success' | 'error' = 'light') => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -304,15 +372,6 @@ const App: React.FC = () => {
     return rank ? rank.name : RANKS[0].name;
   }, [userStats.xp]);
 
-  const primeAudio = useCallback(() => {
-    if (audioPrimed.current) return;
-    const synth = window.speechSynthesis;
-    const utterance = new SpeechSynthesisUtterance("başla");
-    utterance.volume = 0;
-    synth.speak(utterance);
-    audioPrimed.current = true;
-  }, []);
-
   useEffect(() => {
     if ((window as any).hideAppLoader) (window as any).hideAppLoader();
     const savedHistory = localStorage.getItem('cognivault_history');
@@ -320,28 +379,25 @@ const App: React.FC = () => {
     if (savedHistory) setHistory(JSON.parse(savedHistory));
     if (savedStats) setUserStats(JSON.parse(savedStats));
 
-    const loadVoicesFunc = () => {
-      const voices = window.speechSynthesis.getVoices();
-      const trVoice = voices.find(v => v.lang.toLowerCase().includes('tr'));
-      if (trVoice) voiceRef.current = trVoice;
-    };
-    
-    loadVoicesFunc();
-    window.speechSynthesis.onvoiceschanged = loadVoicesFunc;
+    // Polling voice loader for Android
+    loadVoices((voice) => {
+      voiceRef.current = voice;
+    });
 
-    const unlocker = () => {
-      primeAudio();
-      window.removeEventListener('click', unlocker);
-      window.removeEventListener('touchstart', unlocker);
+    // Interaction listener to unlock audio on first touch anywhere
+    const globalUnlock = () => {
+      unlockAudio();
+      window.removeEventListener('click', globalUnlock);
+      window.removeEventListener('touchstart', globalUnlock);
     };
-    window.addEventListener('click', unlocker);
-    window.addEventListener('touchstart', unlocker);
-    
+    window.addEventListener('click', globalUnlock);
+    window.addEventListener('touchstart', globalUnlock);
+
     return () => {
-      window.removeEventListener('click', unlocker);
-      window.removeEventListener('touchstart', unlocker);
+        window.removeEventListener('click', globalUnlock);
+        window.removeEventListener('touchstart', globalUnlock);
     };
-  }, [primeAudio]);
+  }, []);
 
   useEffect(() => { localStorage.setItem('cognivault_history', JSON.stringify(history)); }, [history]);
   useEffect(() => { localStorage.setItem('cognivault_stats', JSON.stringify(userStats)); }, [userStats]);
@@ -398,7 +454,7 @@ const App: React.FC = () => {
   }, [calculateFinalScore, level, gameMode, isDailyChallenge, userStats, isPractice, isMarathon]);
 
   const startGame = (isDaily = false) => {
-    primeAudio();
+    unlockAudio();
     setIsDailyChallenge(isDaily);
     const len = getSequenceLength(level, isPractice || isMarathon);
     const seed = isDaily ? new Date().setHours(0,0,0,0) : undefined;
@@ -437,7 +493,6 @@ const App: React.FC = () => {
   }, [isPlaying, playNextStimulus, speed]);
 
   const handlePositionClick = () => {
-    primeAudio();
     if (tutorialStep === 'demo_step_3') {
       setTutorialSuccess(true); triggerHaptic('light'); setButtonFeedback(p => ({ ...p, position: true }));
       setTimeout(() => setButtonFeedback(p => ({ ...p, position: false })), 200); return;
@@ -455,7 +510,6 @@ const App: React.FC = () => {
   };
 
   const handleSoundClick = () => {
-    primeAudio();
     if (gameState !== 'playing' || currentIndex < level) return;
     const targetIdx = currentIndex - 1;
     if (userSoundInputs.current.includes(targetIdx)) return;
@@ -469,7 +523,6 @@ const App: React.FC = () => {
   };
 
   const handleColorClick = () => {
-    primeAudio();
     if (gameState !== 'playing' || currentIndex < level) return;
     const targetIdx = currentIndex - 1;
     if (userColorInputs.current.includes(targetIdx)) return;
@@ -500,16 +553,26 @@ const App: React.FC = () => {
     }
   };
 
-  const startTutorial = () => { primeAudio(); setTutorialStep('welcome'); setGameState('idle'); setTutorialSuccess(false); triggerHaptic('medium'); };
+  const startTutorial = () => { 
+    unlockAudio();
+    setTutorialStep('welcome'); setGameState('idle'); setTutorialSuccess(false); triggerHaptic('medium'); 
+  };
   
   const nextTutorialStep = () => {
-    primeAudio();
+    unlockAudio();
     triggerHaptic('light');
     if (tutorialStep === 'welcome') { setTutorialStep('demo_step_1'); setTutorialActiveSquare(2); }
     else if (tutorialStep === 'demo_step_1') { setTutorialStep('demo_step_2'); setTutorialActiveSquare(6); }
     else if (tutorialStep === 'demo_step_2') { setTutorialStep('demo_step_3'); setTutorialActiveSquare(6); setTutorialSuccess(false); }
     else if (tutorialStep === 'demo_step_3') { setTutorialStep('ready'); }
     else if (tutorialStep === 'ready') { setTutorialStep(null); setLevel(1); setGameMode('position'); startGame(); }
+  };
+
+  const handleTestSound = () => {
+      unlockAudio();
+      speakLetter(LETTERS[testSoundIndex], voiceRef.current); 
+      setTestSoundIndex(p => (p + 1) % LETTERS.length); 
+      triggerHaptic('light');
   };
 
   useEffect(() => {
@@ -686,7 +749,7 @@ const App: React.FC = () => {
                 </div>
                 <div className="flex gap-4">
                   <button onClick={() => { setIsZenMode(!isZenMode); triggerHaptic('light'); }} className={`flex-1 py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all active:scale-95 border ${isZenMode ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-200' : 'bg-slate-800/30 border-white/5 text-slate-400'}`}><EyeOff size={16} /> Zen Modu</button>
-                  <button onClick={() => { speakLetter(LETTERS[testSoundIndex], voiceRef.current); setTestSoundIndex(p => (p + 1) % LETTERS.length); triggerHaptic('light'); }} className="flex-1 py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 border bg-slate-800/30 border-white/5 text-slate-400 active:scale-95 transition-all"><Volume2 size={16} /> Ses Kontrol</button>
+                  <button onClick={handleTestSound} className="flex-1 py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 border bg-slate-800/30 border-white/5 text-slate-400 active:scale-95 transition-all"><Volume2 size={16} /> Ses Kontrol</button>
                 </div>
               </div>
             )}
