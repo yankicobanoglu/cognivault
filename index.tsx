@@ -57,8 +57,6 @@ interface ButtonFeedback {
 
 type TutorialStep = 
   | 'welcome' 
-  | 'nback_logic' 
-  | 'interactive_intro'
   | 'demo_step_1' 
   | 'demo_step_2' 
   | 'demo_step_3'
@@ -210,21 +208,32 @@ const generateSequence = (level: number, mode: GameMode, length: number, seed?: 
 const speakLetter = (letter: string, voice?: SpeechSynthesisVoice | null) => {
   const synth = window.speechSynthesis;
   synth.cancel();
+  
+  const text = PHONETIC_MAP[letter] || letter.toLowerCase();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'tr-TR';
+  
+  if (voice) {
+    utterance.voice = voice;
+  } else {
+    const voices = synth.getVoices();
+    const trVoice = voices.find(v => v.lang.toLowerCase().includes('tr'));
+    if (trVoice) utterance.voice = trVoice;
+  }
+
+  let rate = 0.75;
+  if (['A', 'O', 'U'].includes(letter)) rate = 0.85;
+  else if (['E', 'İ'].includes(letter)) rate = 0.8;
+  
+  utterance.rate = rate;
+  utterance.volume = 1.0;
+  utterance.pitch = 1.0;
+  
   setTimeout(() => {
-    let rate = 0.7;
-    if (['A', 'O', 'U'].includes(letter)) rate = 0.85;
-    else if (['E', 'İ'].includes(letter)) rate = 0.8;
-    const utterance = new SpeechSynthesisUtterance(PHONETIC_MAP[letter] || letter.toLowerCase());
-    utterance.lang = 'tr-TR';
-    if (voice) utterance.voice = voice;
-    utterance.rate = rate;
-    utterance.volume = 1.0;
-    utterance.pitch = 1.0;
     synth.speak(utterance);
-  }, 100);
+  }, 35);
 };
 
-// --- COMPONENTS ---
 const NeuralMesh: React.FC<{ combo: number }> = ({ combo }) => {
   const intensity = Math.min(combo / 10, 1);
   const pulseDuration = 4 - (intensity * 3);
@@ -281,6 +290,7 @@ const App: React.FC = () => {
   const [demoActive, setDemoActive] = useState<number | null>(null);
   const [demoButtonPressed, setDemoButtonPressed] = useState(false);
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  const audioPrimed = useRef(false);
 
   const triggerHaptic = (type: 'light' | 'medium' | 'success' | 'error' = 'light') => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -294,6 +304,15 @@ const App: React.FC = () => {
     return rank ? rank.name : RANKS[0].name;
   }, [userStats.xp]);
 
+  const primeAudio = useCallback(() => {
+    if (audioPrimed.current) return;
+    const synth = window.speechSynthesis;
+    const utterance = new SpeechSynthesisUtterance("başla");
+    utterance.volume = 0;
+    synth.speak(utterance);
+    audioPrimed.current = true;
+  }, []);
+
   useEffect(() => {
     if ((window as any).hideAppLoader) (window as any).hideAppLoader();
     const savedHistory = localStorage.getItem('cognivault_history');
@@ -303,48 +322,29 @@ const App: React.FC = () => {
 
     const loadVoicesFunc = () => {
       const voices = window.speechSynthesis.getVoices();
-      voiceRef.current = voices.find(v => v.lang.startsWith('tr')) || null;
+      const trVoice = voices.find(v => v.lang.toLowerCase().includes('tr'));
+      if (trVoice) voiceRef.current = trVoice;
     };
+    
     loadVoicesFunc();
     window.speechSynthesis.onvoiceschanged = loadVoicesFunc;
-  }, []);
+
+    const unlocker = () => {
+      primeAudio();
+      window.removeEventListener('click', unlocker);
+      window.removeEventListener('touchstart', unlocker);
+    };
+    window.addEventListener('click', unlocker);
+    window.addEventListener('touchstart', unlocker);
+    
+    return () => {
+      window.removeEventListener('click', unlocker);
+      window.removeEventListener('touchstart', unlocker);
+    };
+  }, [primeAudio]);
 
   useEffect(() => { localStorage.setItem('cognivault_history', JSON.stringify(history)); }, [history]);
   useEffect(() => { localStorage.setItem('cognivault_stats', JSON.stringify(userStats)); }, [userStats]);
-
-  const primeAudio = () => {
-    const utterance = new SpeechSynthesisUtterance("");
-    window.speechSynthesis.speak(utterance);
-  };
-
-  const removeAllProgress = () => {
-    if (window.confirm("Tüm ilerlemeniz, TP puanlarınız ve geçmişiniz kalıcı olarak silinecektir. Emin misiniz?")) {
-      localStorage.clear();
-      setHistory([]);
-      setUserStats({ xp: 0, streak: 0, lastPlayed: 0, rank: RANKS[0].name, bestN: 1 });
-      setLevel(1);
-      setGameMode('position');
-      setSpeed('normal');
-      setIsPractice(false);
-      setIsMarathon(false);
-      setIsZenMode(false);
-      setGameState('idle');
-      triggerHaptic('error');
-    }
-  };
-
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (gameState !== 'playing') return;
-    const key = e.key.toLowerCase();
-    if (key === 'a') handlePositionClick();
-    if (key === 'l') handleSoundClick();
-    if (key === 's' && gameMode === 'triple') handleColorClick();
-  }, [gameState, gameMode]);
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
 
   const calculateFinalScore = useCallback((): ScoreDetails => {
     const calcMod = (inputs: number[], matches: number[]) => ({
@@ -361,7 +361,6 @@ const App: React.FC = () => {
     const totalPossible = pos.totalPossible + (gameMode !== 'position' ? snd.totalPossible : 0) + (gameMode === 'triple' ? col.totalPossible : 0);
     const totalFalseAlarms = pos.falseAlarms + (gameMode !== 'position' ? snd.falseAlarms : 0) + (gameMode === 'triple' ? col.falseAlarms : 0);
     
-    // UI/UX Change: Calculate achievement based on number of correct matches over total possible matches
     const percentage = Math.max(0, Math.round(totalPossible > 0 ? (totalCorrect / totalPossible) * 100 : 0));
     
     return { position: pos, sound: snd, color: col, overall: { percentage, totalCorrect, totalMissed: 0, totalFalseAlarms } };
@@ -371,11 +370,7 @@ const App: React.FC = () => {
     window.speechSynthesis.cancel();
     const details = calculateFinalScore();
     const percentage = details.overall.percentage;
-    const baseXP = percentage * 2;
-    const modeMult = XP_MULTIPLIERS[gameMode] || 1;
-    const speedMult = XP_MULTIPLIERS[speed] || 1;
-    const levelMult = 1 + (level * 0.2);
-    const totalXP = Math.round(baseXP * modeMult * speedMult * levelMult);
+    const totalXP = Math.round(percentage * 2 * (XP_MULTIPLIERS[gameMode] || 1) * (1 + (level * 0.2)));
 
     const today = new Date().setHours(0,0,0,0);
     let newStreak = userStats.streak;
@@ -392,23 +387,15 @@ const App: React.FC = () => {
     setCombo(0);
     triggerHaptic(percentage > 80 ? 'success' : 'medium');
 
-    // Automatic Progression Logic
     if (percentage >= 90 && !isPractice && !isMarathon) {
-        if (level < 9) {
-            setLevel(prev => prev + 1);
-        } else {
-            if (gameMode === 'position') {
-                setGameMode('dual');
-                setLevel(1);
-            } else if (gameMode === 'dual') {
-                setGameMode('triple');
-                setLevel(1);
-            } else {
-                setLevel(prev => prev + 1);
-            }
+        if (level < 9) setLevel(prev => prev + 1);
+        else {
+            if (gameMode === 'position') { setGameMode('dual'); setLevel(1); }
+            else if (gameMode === 'dual') { setGameMode('triple'); setLevel(1); }
+            else setLevel(prev => prev + 1);
         }
     }
-  }, [calculateFinalScore, level, gameMode, isDailyChallenge, userStats, speed, isPractice, isMarathon]);
+  }, [calculateFinalScore, level, gameMode, isDailyChallenge, userStats, isPractice, isMarathon]);
 
   const startGame = (isDaily = false) => {
     primeAudio();
@@ -435,20 +422,13 @@ const App: React.FC = () => {
   };
 
   const playNextStimulus = useCallback(() => {
-    if (isMarathon && currentIndex >= level) {
-      const prevIdx = currentIndex - 1;
-      const missed = (positionMatches.includes(prevIdx) && !userPositionInputs.current.includes(prevIdx)) ||
-                     (gameMode !== 'position' && soundMatches.includes(prevIdx) && !userSoundInputs.current.includes(prevIdx)) ||
-                     (gameMode === 'triple' && colorMatches.includes(prevIdx) && !userColorInputs.current.includes(prevIdx));
-      if (missed) { triggerHaptic('error'); finishGame(); return; }
-    }
     if (currentIndex >= sequence.length) { finishGame(); return; }
     const current = sequence[currentIndex];
     setActiveStimulus({ pos: current.position, col: (gameMode === 'triple') ? current.color : '#6366f1' });
     if (gameMode !== 'position') speakLetter(current.sound, voiceRef.current);
     setTimeout(() => setActiveStimulus(null), STIMULUS_DURATION);
     setCurrentIndex(prev => prev + 1);
-  }, [currentIndex, sequence, gameMode, isMarathon, level, positionMatches, soundMatches, colorMatches, finishGame]);
+  }, [currentIndex, sequence, gameMode, finishGame]);
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -457,6 +437,7 @@ const App: React.FC = () => {
   }, [isPlaying, playNextStimulus, speed]);
 
   const handlePositionClick = () => {
+    primeAudio();
     if (tutorialStep === 'demo_step_3') {
       setTutorialSuccess(true); triggerHaptic('light'); setButtonFeedback(p => ({ ...p, position: true }));
       setTimeout(() => setButtonFeedback(p => ({ ...p, position: false })), 200); return;
@@ -474,6 +455,7 @@ const App: React.FC = () => {
   };
 
   const handleSoundClick = () => {
+    primeAudio();
     if (gameState !== 'playing' || currentIndex < level) return;
     const targetIdx = currentIndex - 1;
     if (userSoundInputs.current.includes(targetIdx)) return;
@@ -487,6 +469,7 @@ const App: React.FC = () => {
   };
 
   const handleColorClick = () => {
+    primeAudio();
     if (gameState !== 'playing' || currentIndex < level) return;
     const targetIdx = currentIndex - 1;
     if (userColorInputs.current.includes(targetIdx)) return;
@@ -505,33 +488,28 @@ const App: React.FC = () => {
     triggerHaptic('light');
   };
 
+  const removeAllProgress = () => {
+    if (window.confirm("Tüm ilerlemeniz, TP puanlarınız ve geçmişiniz kalıcı olarak silinecektir. Emin misiniz?")) {
+      localStorage.clear();
+      setUserStats({ xp: 0, streak: 0, lastPlayed: 0, rank: RANKS[0].name, bestN: 1 });
+      setHistory([]);
+      setLevel(1);
+      setGameMode('dual');
+      setGameState('idle');
+      triggerHaptic('error');
+    }
+  };
+
   const startTutorial = () => { primeAudio(); setTutorialStep('welcome'); setGameState('idle'); setTutorialSuccess(false); triggerHaptic('medium'); };
   
   const nextTutorialStep = () => {
+    primeAudio();
     triggerHaptic('light');
-    if (tutorialStep === 'welcome') { 
-      setTutorialStep('demo_step_1'); 
-      setTutorialActiveSquare(4); 
-    }
-    else if (tutorialStep === 'demo_step_1') { 
-      setTutorialStep('demo_step_2'); 
-      setTutorialActiveSquare(4); // Keep same for N=1 logic demo
-    }
-    else if (tutorialStep === 'demo_step_2') { 
-      setTutorialStep('demo_step_3'); 
-      setTutorialActiveSquare(4); 
-      setTutorialSuccess(false); 
-    }
-    else if (tutorialStep === 'demo_step_3') {
-      setTutorialStep('ready');
-    }
-    else if (tutorialStep === 'ready') { 
-      // UI/UX Change: Start an N=1 game with Position only mode after tutorial
-      setTutorialStep(null); 
-      setLevel(1);
-      setGameMode('position');
-      startGame(); 
-    }
+    if (tutorialStep === 'welcome') { setTutorialStep('demo_step_1'); setTutorialActiveSquare(2); }
+    else if (tutorialStep === 'demo_step_1') { setTutorialStep('demo_step_2'); setTutorialActiveSquare(6); }
+    else if (tutorialStep === 'demo_step_2') { setTutorialStep('demo_step_3'); setTutorialActiveSquare(6); setTutorialSuccess(false); }
+    else if (tutorialStep === 'demo_step_3') { setTutorialStep('ready'); }
+    else if (tutorialStep === 'ready') { setTutorialStep(null); setLevel(1); setGameMode('position'); startGame(); }
   };
 
   useEffect(() => {
@@ -565,19 +543,14 @@ const App: React.FC = () => {
   const dynamicExplanations = useMemo(() => {
     const explanations = [];
     explanations.push({ icon: <Brain size={14} className="text-indigo-500" />, text: `N-${level} Protokolü: Mevcut uyaran ile ${level} adım öncesini karşılaştırın.` });
-    
     if (gameMode === 'position') explanations.push({ icon: <Square size={14} className="text-blue-500" />, text: "Sadece görsel konumlara odaklanın. Ses ve renkleri görmezden gelin." });
     else if (gameMode === 'dual') explanations.push({ icon: <Volume2 size={14} className="text-purple-500" />, text: "Eş zamanlı olarak hem kare pozisyonlarını hem de harf seslerini takip edin." });
     else explanations.push({ icon: <Palette size={14} className="text-emerald-500" />, text: "Maksimum bilişsel yük: Konum, ses ve renk dizilerini ayrı ayrı eşleştirin." });
-
     if (speed === 'fast') explanations.push({ icon: <Zap size={14} className="text-yellow-500" />, text: "Hızlı ritim! Refleksleriniz ve anlık belleğiniz sınırda test edilecek." });
     else if (speed === 'slow') explanations.push({ icon: <Info size={14} className="text-indigo-400" />, text: "Yavaş ritim: Odaklanmak ve zihinsel imgeleme yapmak için bol vaktiniz var." });
-
     if (isMarathon) explanations.push({ icon: <ZapOff size={14} className="text-rose-500" />, text: "Maraton Modu: Tek bir hata veya kaçırılan eşleşme seansı sonlandırır!" });
     else if (isPractice) explanations.push({ icon: <TrendingUp size={14} className="text-emerald-500" />, text: "Alıştırma Modu: Sabit bir bitiş yok, dilediğiniz kadar pratik yapın." });
-
     if (isZenMode) explanations.push({ icon: <EyeOff size={14} className="text-slate-400" />, text: "Zen Modu Aktif: İlerleme çubuğu ve puanlar gizlenerek saf odak sağlanır." });
-
     return explanations;
   }, [level, gameMode, speed, isPractice, isMarathon, isZenMode]);
 
@@ -591,23 +564,18 @@ const App: React.FC = () => {
             <div className="flex flex-col items-center">
                <div className="p-5 bg-indigo-500/20 rounded-[2rem] mb-6 shadow-inner ring-1 ring-white/10"><HelpCircle className="text-indigo-400" size={48} /></div>
                <div className="space-y-4 text-center mb-8">
-                {/* UI/UX Change: Header renamed */}
-                <h2 className="text-3xl font-black text-white leading-tight uppercase tracking-wider">{tutorialStep === 'welcome' ? 'Nasıl Oynanır' : tutorialStep === 'ready' ? 'Göreve Hazır' : 'Zihin Eğitimi'}</h2>
+                <h2 className="text-3xl font-black text-white leading-tight">
+                  {tutorialStep === 'welcome' ? 'Nasıl Oynanır' : tutorialStep === 'ready' ? 'Göreve Hazır' : 'Zihin Eğitimi'}
+                </h2>
                 <div className="text-slate-400 text-sm leading-relaxed px-2">
-                  {/* UI/UX Change: Explanations focused on N=1 */}
                   {tutorialStep === 'welcome' && "Hoş geldiniz. Bu protokol çalışma belleği kapasitenizi hızla artırır. Kalibrasyona başlayalım."}
-                  {tutorialStep === 'demo_step_1' && "Bu aşamada karelerin konumuna odaklanın. N=1 için sadece 1 adım öncesini kontrol ederiz."}
-                  {tutorialStep === 'demo_step_2' && "Her yeni karede, az önceki karenin nerede olduğunu hatırlamaya çalışın."}
+                  {tutorialStep === 'demo_step_1' && "N=1 için karemizen mevcut yerini aklınızda tutun. İlk konum işaretlendi."}
+                  {tutorialStep === 'demo_step_2' && "Yeni bir konum işaretlendi. Şimdi bir önceki kareyle karşılaştırma yapacağız."}
                   {tutorialStep === 'demo_step_3' && (
                     <div className="flex flex-col items-center gap-4">
                       <span>N=1 modunda, mevcut kare az önceki kareyle aynı yerdeyse KONUM butonuna basın!</span>
                       {!tutorialSuccess && (
-                        <button 
-                          onClick={handlePositionClick} 
-                          className="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm animate-bounce shadow-lg"
-                        >
-                          KONUM BUTONU
-                        </button>
+                        <button onClick={() => handlePositionClick()} className="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm animate-bounce shadow-lg">KONUM BUTONU</button>
                       )}
                     </div>
                   )}
@@ -616,7 +584,7 @@ const App: React.FC = () => {
                 {['demo_step_1', 'demo_step_2', 'demo_step_3'].includes(tutorialStep) && (
                   <div className="grid grid-cols-3 gap-2 aspect-square w-32 mx-auto p-3 bg-slate-950/80 rounded-3xl border border-white/5 shadow-2xl mt-4">
                     {[...Array(9)].map((_, i) => (
-                      <div key={i} className={`rounded-xl transition-all duration-300 ${tutorialActiveSquare === i ? 'bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
+                      <div key={i} className={`rounded-xl transition-all duration-300 aspect-square ${tutorialActiveSquare === i ? 'bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
                     ))}
                   </div>
                 )}
@@ -629,9 +597,9 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <div className={`max-w-xl w-full relative z-10 transition-all duration-700 flex flex-col ${isZenMode && isPlaying ? 'gap-0 min-h-[85vh] justify-center' : 'gap-4'}`}>
+      <div className={`max-w-xl w-full relative z-10 transition-all duration-700 flex flex-col ${isZenMode && isPlaying ? 'gap-0 min-h-[85vh] justify-center items-center' : 'gap-4'}`}>
         {!isPlaying && gameState !== 'finished' && (
-          <div className="flex items-center justify-between px-2 mb-2 animate-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center justify-between px-2 mb-2 animate-in slide-in-from-top-4 duration-500 w-full">
              <div className="flex items-center gap-3 bg-slate-900/40 backdrop-blur-xl border border-white/5 py-2 px-4 rounded-2xl">
                 <Flame className={`text-orange-500 ${userStats.streak > 0 ? 'fill-orange-500 animate-pulse' : ''}`} size={20} />
                 <span className="text-white font-black text-sm">{userStats.streak} Gün</span>
@@ -644,7 +612,7 @@ const App: React.FC = () => {
         )}
 
         {(!isZenMode || !isPlaying) && gameState !== 'finished' && gameState !== 'analytics' && (
-          <div className="bg-slate-900/30 backdrop-blur-3xl rounded-[2.5rem] p-6 border border-white/10 shadow-2xl transition-all duration-500 animate-in fade-in">
+          <div className="bg-slate-900/30 backdrop-blur-3xl rounded-[2.5rem] p-6 border border-white/10 shadow-2xl transition-all duration-500 animate-in fade-in w-full">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="p-4 bg-indigo-500/20 rounded-[1.5rem] shadow-lg ring-1 ring-white/10"><Brain className="text-indigo-400" size={36} /></div>
@@ -659,40 +627,33 @@ const App: React.FC = () => {
         )}
 
         {gameState === 'analytics' && (
-          <div className="bg-slate-900/40 backdrop-blur-3xl rounded-[3rem] p-8 border border-white/10 shadow-2xl animate-in fade-in zoom-in duration-500">
+          <div className="bg-slate-900/40 backdrop-blur-3xl rounded-[3rem] p-8 border border-white/10 shadow-2xl animate-in fade-in zoom-in duration-500 w-full">
              <div className="flex items-center justify-between mb-8"><h2 className="text-2xl font-black text-white">Nöral Metrikler</h2><button onClick={() => { setGameState('idle'); triggerHaptic('light'); }} className="p-3 bg-slate-800/50 rounded-2xl text-slate-400 border border-white/5 active:scale-90"><ArrowLeft size={20} /></button></div>
               <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="bg-slate-950/50 p-6 rounded-[2rem] border border-white/5 text-center"><p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Tepki Süresi</p><p className="text-3xl font-black text-white">{Math.round(history.reduce((a,b)=>a+(b.reactionTimes.reduce((x,y)=>x+y,0)/b.reactionTimes.length||0),0)/history.length||450)}<span className="text-xs text-indigo-400 ml-1 uppercase">ms</span></p></div>
+                  <div className="bg-slate-950/50 p-6 rounded-[2rem] border border-white/5 text-center"><p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Tepki Süresi</p><p className="text-3xl font-black text-white">{Math.round(history.reduce((a,b)=>a+(b.reactionTimes.reduce((x,y)=>x+y,0)/b.reactionTimes.length||0),0)/history.length||0)}<span className="text-xs text-indigo-400 ml-1 uppercase">ms</span></p></div>
                   <div className="bg-slate-950/50 p-6 rounded-[2rem] border border-white/5 text-center"><p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">En İyi Zorluk</p><p className="text-3xl font-black text-white">N-{userStats.bestN}</p></div>
               </div>
               <div className="bg-slate-950/40 p-8 rounded-[2.5rem] border border-white/5 text-center mb-6">
                  <h3 className="text-xs font-black text-indigo-400 uppercase tracking-[0.2em] mb-6 flex items-center justify-center gap-2"><Zap size={16} /> Dikkat Eksikliği Haritası</h3>
                  <div className="grid grid-cols-3 gap-3 aspect-square w-48 mx-auto">
                     {missedHeatmap.map((count, i) => (
-                      <div key={i} className="rounded-xl border border-white/5 bg-slate-900/40 overflow-hidden relative"><div className="absolute inset-0 bg-rose-500 transition-opacity duration-1000" style={{ opacity: (count / maxMiss) * 0.7 }} /></div>
+                      <div key={i} className="rounded-xl border border-white/5 bg-slate-900/40 overflow-hidden relative aspect-square"><div className="absolute inset-0 bg-rose-500 transition-opacity duration-1000" style={{ opacity: (count / maxMiss) * 0.7 }} /></div>
                     ))}
                  </div>
               </div>
-              {/* Data Reset Button Implementation */}
-              <button 
-                onClick={(e) => { e.stopPropagation(); removeAllProgress(); }} 
-                className="w-full py-5 rounded-[1.5rem] bg-rose-600/10 text-rose-500 font-black text-xs flex items-center justify-center gap-2 border border-rose-500/20 active:scale-95 hover:bg-rose-600 hover:text-white transition-all shadow-lg"
-              >
-                <Trash2 size={16} /> Tüm Verileri Sıfırla
-              </button>
+              <button onClick={() => { removeAllProgress(); }} className="w-full py-5 rounded-[1.5rem] bg-rose-600/10 text-rose-500 font-black text-xs flex items-center justify-center gap-2 border border-rose-500/20 active:scale-95 hover:bg-rose-600 hover:text-white transition-all shadow-lg"><Trash2 size={16} /> TÜM VERİLERİ SIFIRLA</button>
           </div>
         )}
 
-        {/* UI/UX Change: Hide Grid on Finished State */}
         {gameState !== 'analytics' && gameState !== 'finished' && (
-          <div className={`transition-all duration-700 ${isZenMode && isPlaying ? 'items-center gap-12' : 'bg-slate-900/30 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 shadow-2xl'}`}>
+          <div className={`transition-all duration-700 w-full flex flex-col items-center ${isZenMode && isPlaying ? 'gap-12' : 'bg-slate-900/30 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 shadow-2xl'}`}>
             {gameState === 'idle' && (
-              <div className="space-y-6 mb-8 animate-in fade-in duration-500">
+              <div className="space-y-6 mb-8 animate-in fade-in duration-500 w-full">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Target size={14} className="text-indigo-500" /> Zorluk Derecesi</label>
                     <div className="flex p-1.5 bg-slate-800/40 rounded-2xl border border-white/5">
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].slice(0, 5).map((l) => (
+                      {[1, 2, 3, 4, 5].map((l) => (
                         <button key={l} onClick={() => { setLevel(l); triggerHaptic('light'); }} className={`flex-1 py-2 rounded-xl font-black text-sm transition-all active:scale-90 ${level === l ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400'}`}>{l}</button>
                       ))}
                     </div>
@@ -724,83 +685,81 @@ const App: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <button onClick={() => { triggerHaptic('light'); setIsZenMode(!isZenMode); }} className={`flex-1 py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all active:scale-95 outline-none border-none ${isZenMode ? 'bg-indigo-500/20 text-indigo-200' : 'bg-slate-800/30 text-slate-400'}`}><EyeOff size={16} /> Zen Modu</button>
-                  <button onClick={() => { primeAudio(); speakLetter(LETTERS[testSoundIndex], voiceRef.current); setTestSoundIndex(p => (p + 1) % LETTERS.length); triggerHaptic('light'); }} className="flex-1 py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 border bg-slate-800/30 border-white/5 text-slate-400 outline-none active:scale-95 transition-all"><Volume2 size={16} /> Ses Kontrol</button>
+                  <button onClick={() => { setIsZenMode(!isZenMode); triggerHaptic('light'); }} className={`flex-1 py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all active:scale-95 border ${isZenMode ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-200' : 'bg-slate-800/30 border-white/5 text-slate-400'}`}><EyeOff size={16} /> Zen Modu</button>
+                  <button onClick={() => { speakLetter(LETTERS[testSoundIndex], voiceRef.current); setTestSoundIndex(p => (p + 1) % LETTERS.length); triggerHaptic('light'); }} className="flex-1 py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 border bg-slate-800/30 border-white/5 text-slate-400 active:scale-95 transition-all transition-all"><Volume2 size={16} /> Ses Kontrol</button>
                 </div>
               </div>
             )}
 
             {(gameState === 'idle' || gameState === 'playing') && (
-              <div className={`relative flex justify-center transition-all duration-700 ${isZenMode && isPlaying ? 'scale-125 mb-16' : 'mb-8'}`}>
-                 <div className={`grid grid-cols-3 gap-4 aspect-square w-full max-w-[320px] p-5 bg-slate-950/40 rounded-[3rem] border-2 transition-all duration-500 ${isPlaying ? 'border-indigo-500/30 shadow-[0_0_30px_rgba(99,102,241,0.1)]' : 'border-white/5 shadow-2xl'}`}>
+              <div className="relative flex justify-center transition-all duration-700 mb-8 w-full max-w-[320px]">
+                 <div className={`grid grid-cols-3 gap-4 aspect-square w-full p-5 bg-slate-950/40 rounded-[3rem] border-2 transition-all duration-500 ${isPlaying ? 'border-indigo-500/30 ring-8 ring-indigo-500/5 shadow-[0_0_30px_rgba(99,102,241,0.1)]' : 'border-white/5 shadow-2xl'}`}>
                     {[...Array(9)].map((_, i) => {
                       const isActive = gameState === 'idle' ? i === demoActive : activeStimulus?.pos === i;
                       const activeColor = activeStimulus?.col || '#6366f1';
-                      return (<div key={i} style={{ backgroundColor: isActive ? activeColor : undefined }} className={`rounded-2xl transition-all duration-150 border transform ${isActive ? 'scale-105 shadow-[0_0_20px_rgba(255,255,255,0.2)]' : 'bg-slate-900/40 border-white/5'}`} />);
+                      return (<div key={i} style={{ backgroundColor: isActive ? activeColor : undefined }} className={`rounded-2xl transition-all duration-150 border transform aspect-square ${isActive ? 'scale-105 shadow-[0_0_20px_rgba(255,255,255,0.2)] ring-4 ring-white/10' : 'bg-slate-900/40 border-white/5'}`} />);
                     })}
                  </div>
               </div>
             )}
 
-            {/* UI/UX Change: Fixed alignment in Zen mode by adding mx-auto and w-full */}
-            <div className={`w-full transition-all duration-500 mx-auto ${isZenMode && isPlaying ? 'max-w-[340px]' : ''}`}>
+            <div className={`w-full transition-all duration-500 mx-auto ${isZenMode && isPlaying ? 'max-w-[340px] flex flex-col items-center' : ''}`}>
               {gameState === 'idle' && (
-                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <button onClick={() => { triggerHaptic('medium'); startGame(false); }} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-6 rounded-[2rem] font-black text-2xl flex items-center justify-center gap-4 transition-all shadow-xl shadow-indigo-600/30 active:scale-95 group uppercase tracking-tight"><Play size={28} className="fill-white group-hover:scale-110 transition-transform" />Oyunu Başlat</button>
+                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full">
+                  <button onClick={() => { startGame(false); }} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-6 rounded-[2rem] font-black text-2xl flex items-center justify-center gap-4 transition-all shadow-xl shadow-indigo-600/30 active:scale-95 group uppercase tracking-tight"><Play size={28} className="fill-white group-hover:scale-110 transition-transform" />Oyunu Başlat</button>
                   <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => { triggerHaptic('medium'); startGame(true); }} className="bg-emerald-600 hover:bg-emerald-500 text-white py-5 rounded-[1.5rem] font-black text-sm flex flex-col items-center justify-center gap-1 shadow-lg active:scale-95"><Calendar size={20} /> Günlük Meydan Okuma</button>
+                    <button onClick={() => { startGame(true); }} className="bg-emerald-600 hover:bg-emerald-500 text-white py-5 rounded-[1.5rem] font-black text-sm flex flex-col items-center justify-center gap-1 shadow-lg active:scale-95"><Calendar size={20} /> Günlük Meydan Okuma</button>
                     <button onClick={() => { setGameState('analytics'); triggerHaptic('light'); }} className="bg-slate-800 hover:bg-slate-700 text-slate-300 py-5 rounded-[1.5rem] font-black text-sm flex flex-col items-center justify-center gap-1 border border-white/10 active:scale-95"><BarChart3 size={20} /> Geçmiş</button>
                   </div>
                 </div>
               )}
               {gameState === 'playing' && (
-                <div className="space-y-6 pb-20">
-                  <div className={`grid ${gameMode === 'position' ? 'grid-cols-1' : gameMode === 'dual' ? 'grid-cols-2' : 'grid-cols-3'} gap-4`}>
-                    <button onMouseDown={handlePositionClick} disabled={currentIndex <= level} className={`relative py-8 rounded-[2rem] font-black transition-all border-2 active:scale-90 shadow-2xl ${buttonFeedback.position ? 'bg-indigo-400' : 'bg-indigo-600'} text-white outline-none border-transparent`}><div className="flex flex-col items-center gap-2"><Square size={36} /><span className="text-[11px] uppercase tracking-widest font-black">Konum</span></div></button>
+                <div className="space-y-6 w-full">
+                  <div className={`grid ${gameMode === 'position' ? 'grid-cols-1' : gameMode === 'dual' ? 'grid-cols-2' : 'grid-cols-3'} gap-4 w-full`}>
+                    <button onMouseDown={() => handlePositionClick()} disabled={currentIndex <= level} className={`relative py-8 rounded-[2rem] font-black transition-all border-2 active:scale-90 shadow-2xl ${buttonFeedback.position ? 'bg-indigo-400' : 'bg-indigo-600'} text-white outline-none border-transparent disabled:opacity-30`}><div className="flex flex-col items-center gap-2"><Square size={36} /><span className="text-[11px] uppercase tracking-widest font-black">Konum</span></div></button>
                     {(gameMode === 'dual' || gameMode === 'triple') && (
-                      <button onMouseDown={handleSoundClick} disabled={currentIndex <= level} className={`relative py-8 rounded-[2rem] font-black transition-all border-2 active:scale-90 shadow-2xl ${buttonFeedback.sound ? 'bg-purple-400' : 'bg-purple-600'} text-white outline-none border-transparent`}><div className="flex flex-col items-center gap-2"><Volume2 size={36} /><span className="text-[11px] uppercase tracking-widest font-black">Ses</span></div></button>
+                      <button onMouseDown={() => handleSoundClick()} disabled={currentIndex <= level} className={`relative py-8 rounded-[2rem] font-black transition-all border-2 active:scale-90 shadow-2xl ${buttonFeedback.sound ? 'bg-purple-400' : 'bg-purple-600'} text-white outline-none border-transparent disabled:opacity-30`}><div className="flex flex-col items-center gap-2"><Volume2 size={36} /><span className="text-[11px] uppercase tracking-widest font-black">Ses</span></div></button>
                     )}
                     {gameMode === 'triple' && (
-                      <button onMouseDown={handleColorClick} disabled={currentIndex <= level} className={`relative py-8 rounded-[2rem] font-black transition-all border-2 active:scale-90 shadow-2xl ${buttonFeedback.color ? 'bg-emerald-400' : 'bg-emerald-600'} text-white outline-none border-transparent`}><div className="flex flex-col items-center gap-2"><Palette size={36} /><span className="text-[11px] uppercase tracking-widest font-black">Renk</span></div></button>
+                      <button onMouseDown={() => handleColorClick()} disabled={currentIndex <= level} className={`relative py-8 rounded-[2rem] font-black transition-all border-2 active:scale-90 shadow-2xl ${buttonFeedback.color ? 'bg-emerald-400' : 'bg-emerald-600'} text-white outline-none border-transparent disabled:opacity-30`}><div className="flex flex-col items-center gap-2"><Palette size={36} /><span className="text-[11px] uppercase tracking-widest font-black">Renk</span></div></button>
                     )}
                   </div>
                   {!isZenMode && (
-                    <div className="bg-slate-950/40 p-4 rounded-[1.5rem] border border-white/5">
-                      <div className="flex justify-between items-center mb-2 px-1"><span className="text-slate-500 text-[10px] font-black uppercase tracking-widest">İlerleme</span><span className="text-white text-[10px] font-black">{currentIndex} / {sequence.length}</span></div>
-                      <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden"><div className="bg-indigo-500 h-full transition-all duration-300" style={{ width: `${(currentIndex / (sequence.length || 1)) * 100}%` }} /></div>
+                    <div className="bg-slate-950/40 p-4 rounded-[1.5rem] border border-white/5 shadow-inner">
+                      <div className="flex justify-between items-center mb-2 px-1"><span className="text-slate-500 text-[10px] font-black uppercase tracking-widest">İlerleme</span><span className="text-white text-[10px] font-black bg-indigo-500/20 px-2 py-0.5 rounded-lg border border-indigo-500/20">{currentIndex} / {sequence.length}</span></div>
+                      <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden ring-1 ring-white/5"><div className="bg-indigo-500 h-full transition-all duration-300 shadow-[0_0_10px_rgba(99,102,241,0.4)]" style={{ width: `${(currentIndex / (sequence.length || 1)) * 100}%` }} /></div>
                     </div>
                   )}
-                  <button onClick={() => { triggerHaptic('medium'); finishGame(); }} className="w-full py-5 rounded-[2rem] bg-rose-600/10 text-rose-500 font-black text-sm flex items-center justify-center gap-2 border border-rose-500/20 active:scale-95 outline-none"><ZapOff size={20} /> Oyunu Bitir</button>
+                  <button onClick={() => { triggerHaptic('medium'); finishGame(); }} className="w-full py-4 rounded-[1.5rem] bg-slate-800/40 text-slate-500 font-black text-xs flex items-center justify-center gap-2 border border-white/5 hover:bg-slate-800 hover:text-rose-400 transition-all active:scale-95 outline-none"><ZapOff size={16} /> Oyunu Bitir</button>
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* Finished State Screen (Achievement Calculation Fix Applied) */}
         {gameState === 'finished' && scoreDetails && (
           <div className="w-full max-w-xl mx-auto space-y-6 animate-in zoom-in-95 duration-500 text-center py-8">
-            <div className="bg-slate-950/60 p-10 rounded-[3rem] border border-white/10 shadow-inner relative overflow-hidden">
+            <div className="bg-slate-950/60 p-10 rounded-[3rem] border border-white/10 shadow-inner relative overflow-hidden w-full">
               <div className="absolute top-0 right-0 p-8 opacity-5 rotate-12"><Trophy size={140} /></div>
               <h2 className="text-3xl font-black text-indigo-400 mb-2 uppercase tracking-tight">{scoreDetails.overall.percentage >= 90 ? 'Mükemmel Seans!' : 'Seans Tamamlandı'}</h2>
               <div className="text-8xl font-black text-white my-8 tracking-tighter">{scoreDetails.overall.percentage}<span className="text-indigo-500 text-4xl">%</span></div>
               <div className="flex justify-center gap-4 text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]"><span className="flex items-center gap-1"><CheckCircle2 size={12} className="text-emerald-500" /> {scoreDetails.overall.totalCorrect} DOĞRU</span><span className="flex items-center gap-1"><ZapOff size={12} className="text-rose-500" /> {scoreDetails.overall.totalFalseAlarms} HATA</span></div>
             </div>
-            <button onClick={() => { window.speechSynthesis.cancel(); setGameState('idle'); triggerHaptic('light'); }} className="w-full bg-indigo-600 text-white py-6 rounded-[2rem] font-black text-xl flex items-center justify-center gap-4 active:scale-95 shadow-lg"><RotateCcw size={24} /> Menüye Dön</button>
+            <button onClick={() => { resetGame(); }} className="w-full bg-indigo-600 text-white py-6 rounded-[2rem] font-black text-xl flex items-center justify-center gap-4 active:scale-95 shadow-lg group"><RotateCcw size={24} className="group-hover:rotate-180 transition-transform duration-500" /> Menüye Dön</button>
           </div>
         )}
 
         {(!isZenMode || !isPlaying) && gameState === 'idle' && (
-          <div className="bg-slate-900/20 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white/5 shadow-xl animate-in slide-in-from-bottom-4 duration-700 delay-200">
-             <h3 className="text-white text-xs font-black uppercase tracking-widest mb-6 flex items-center gap-2 opacity-70"><Info size={14} className="text-indigo-400" /> Seçili Oyun Ayarları</h3>
-             <div className="space-y-4">
+          <div className="bg-slate-900/20 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white/5 shadow-xl animate-in slide-in-from-bottom-4 duration-700 delay-200 w-full">
+             <h3 className="text-white text-xs font-black uppercase tracking-widest mb-6 flex items-center gap-2 opacity-70"><div className="p-0.5"><Info size={14} className="text-indigo-400" /></div> Oyun Parametreleri</h3>
+             <ul className="text-slate-400 text-[10px] space-y-3 font-bold leading-relaxed">
                {dynamicExplanations.map((exp, idx) => (
-                 <div key={idx} className="flex flex-row items-center gap-4 animate-in fade-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${idx * 100}ms` }}>
-                    <div className="p-1 bg-white/5 rounded-lg shrink-0 flex items-center justify-center border border-white/5">{exp.icon}</div>
-                    <span className="text-slate-400 text-[11px] font-bold leading-tight">{exp.text}</span>
-                 </div>
+                 <li key={idx} className="flex items-start gap-3">
+                    <div className="shrink-0">{exp.icon}</div>
+                    <span>{exp.text}</span>
+                 </li>
                ))}
-             </div>
+             </ul>
           </div>
         )}
       </div>
