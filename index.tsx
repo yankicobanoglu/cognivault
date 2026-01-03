@@ -4,7 +4,7 @@ import {
   Volume2, Square, Play, RotateCcw, Zap, Info, TrendingUp, Trophy, 
   Brain, Palette, Gauge, Target, HelpCircle, XCircle, ChevronRight, 
   CheckCircle2, ArrowLeft, BarChart3, EyeOff, Calendar, Globe, 
-  Flame, Star, ZapOff, Trash2
+  Flame, Star, ZapOff, Trash2, Infinity, Timer
 } from 'lucide-react';
 
 // --- TYPES (Inlined) ---
@@ -360,6 +360,7 @@ const App: React.FC = () => {
   const [demoActive, setDemoActive] = useState<number | null>(null);
   const [demoButtonPressed, setDemoButtonPressed] = useState(false);
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  const [showIntro, setShowIntro] = useState(false);
 
   const triggerHaptic = (type: 'light' | 'medium' | 'success' | 'error' = 'light') => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -379,6 +380,11 @@ const App: React.FC = () => {
     const savedStats = localStorage.getItem('cognivault_stats');
     if (savedHistory) setHistory(JSON.parse(savedHistory));
     if (savedStats) setUserStats(JSON.parse(savedStats));
+
+    // Check if intro has been seen
+    if (!localStorage.getItem('has_seen_intro')) {
+      setShowIntro(true);
+    }
 
     // Polling voice loader for Android
     loadVoices((voice) => {
@@ -576,6 +582,12 @@ const App: React.FC = () => {
       triggerHaptic('light');
   };
 
+  const dismissIntro = () => {
+    localStorage.setItem('has_seen_intro', 'true');
+    setShowIntro(false);
+    triggerHaptic('medium');
+  };
+
   useEffect(() => {
     if (gameState === 'idle') {
       const demoInterval = setInterval(() => setDemoStep(prev => (prev + 1) % 5), 1500);
@@ -604,23 +616,40 @@ const App: React.FC = () => {
   }, [history]);
   const maxMiss = Math.max(...missedHeatmap, 1);
 
-  const dynamicExplanations = useMemo(() => {
-    const explanations = [];
-    explanations.push({ icon: <Brain size={14} className="text-indigo-500" />, text: `N-${level} Protokolü: Mevcut uyaran ile ${level} adım öncesini karşılaştırın.` });
-    if (gameMode === 'position') explanations.push({ icon: <Square size={14} className="text-blue-500" />, text: "Sadece görsel konumlara odaklanın. Ses ve renkleri görmezden gelin." });
-    else if (gameMode === 'dual') explanations.push({ icon: <Volume2 size={14} className="text-purple-500" />, text: "Eş zamanlı olarak hem kare pozisyonlarını hem de harf seslerini takip edin." });
-    else explanations.push({ icon: <Palette size={14} className="text-emerald-500" />, text: "Maksimum bilişsel yük: Konum, ses ve renk dizilerini ayrı ayrı eşleştirin." });
-    if (speed === 'fast') explanations.push({ icon: <Zap size={14} className="text-yellow-500" />, text: "Hızlı ritim! Refleksleriniz ve anlık belleğiniz sınırda test edilecek." });
-    else if (speed === 'slow') explanations.push({ icon: <Info size={14} className="text-indigo-400" />, text: "Yavaş ritim: Odaklanmak ve zihinsel imgeleme yapmak için bol vaktiniz var." });
-    if (isMarathon) explanations.push({ icon: <ZapOff size={14} className="text-rose-500" />, text: "Maraton Modu: Tek bir hata veya kaçırılan eşleşme seansı sonlandırır!" });
-    else if (isPractice) explanations.push({ icon: <TrendingUp size={14} className="text-emerald-500" />, text: "Alıştırma Modu: Sabit bir bitiş yok, dilediğiniz kadar pratik yapın." });
-    if (isZenMode) explanations.push({ icon: <EyeOff size={14} className="text-slate-400" />, text: "Zen Modu Aktif: İlerleme çubuğu ve puanlar gizlenerek saf odak sağlanır." });
-    return explanations;
-  }, [level, gameMode, speed, isPractice, isMarathon, isZenMode]);
-
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden select-none pb-[max(env(safe-area-inset-bottom),16px)] pt-[max(env(safe-area-inset-top),16px)]">
       <NeuralMesh combo={isPlaying ? combo : 0} />
+      
+      {showIntro && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in zoom-in duration-300">
+            <div className="bg-slate-900/80 border border-indigo-500/30 p-8 rounded-[3rem] shadow-2xl max-w-md w-full relative">
+              <div className="flex flex-col items-center">
+                 <div className="p-5 bg-indigo-500/20 rounded-[2rem] mb-6 shadow-inner ring-1 ring-white/10">
+                    <Brain className="text-indigo-400" size={48} />
+                 </div>
+                 <h2 className="text-3xl font-black text-white leading-tight mb-6 text-center">Nasıl Oynanır?</h2>
+                 <div className="text-slate-400 text-sm leading-relaxed space-y-4 text-center mb-8">
+                    <p>
+                      Bu oyun, çalışma belleğini ve odaklanmayı güçlendirmeyi amaçlayan, <span className="text-indigo-400 font-bold">"Dual N-Back"</span> temelli bir zihin egzersizidir.
+                    </p>
+                    <p>
+                      Ekranda sırayla beliren karelerin <span className="text-white font-bold">konumunu</span> ve eş zamanlı olarak okunan <span className="text-white font-bold">harfleri</span> aklınızda tutmanız gerekir.
+                    </p>
+                    <p>
+                      Eğer şu anki konum veya harf, belirlenen seviye sayısı kadar (örneğin 1 adım) <span className="text-white font-bold">öncesindekiyle aynıysa</span>, ilgili butona basarak eşleşmeyi yakalamalısınız.
+                    </p>
+                 </div>
+                 <button 
+                   onClick={dismissIntro}
+                   className="w-full py-5 rounded-[2rem] bg-indigo-600 hover:bg-indigo-500 text-white font-black text-lg flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg"
+                 >
+                   Anladım, Başla <ChevronRight size={22} />
+                 </button>
+              </div>
+            </div>
+        </div>
+      )}
+
       {tutorialStep && (
         <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in zoom-in duration-300">
           <div className="bg-slate-900/80 border border-indigo-500/30 p-8 rounded-[3rem] shadow-2xl max-w-md w-full relative">
@@ -715,7 +744,7 @@ const App: React.FC = () => {
               <div className="space-y-6 mb-8 animate-in fade-in duration-500 w-full">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Target size={14} className="text-indigo-500" /> Zorluk Derecesi</label>
+                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Target size={14} className="text-indigo-500" /> Zorluk Derecesi (N)</label>
                     <div className="flex p-1.5 bg-slate-800/40 rounded-2xl border border-white/5">
                       {[1, 2, 3, 4, 5].map((l) => (
                         <button key={l} onClick={() => { setLevel(l); triggerHaptic('light'); }} className={`flex-1 py-2 rounded-xl font-black text-sm transition-all active:scale-90 ${level === l ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400'}`}>{l}</button>
@@ -771,10 +800,7 @@ const App: React.FC = () => {
               {gameState === 'idle' && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full">
                   <button onClick={() => { startGame(false); }} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-6 rounded-[2rem] font-black text-2xl flex items-center justify-center gap-4 transition-all shadow-xl shadow-indigo-600/30 active:scale-95 group uppercase tracking-tight"><Play size={28} className="fill-white group-hover:scale-110 transition-transform" />Oyunu Başlat</button>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => { startGame(true); }} className="bg-emerald-600 hover:bg-emerald-500 text-white py-5 rounded-[1.5rem] font-black text-sm flex flex-col items-center justify-center gap-1 shadow-lg active:scale-95"><Calendar size={20} /> Günlük Meydan Okuma</button>
-                    <button onClick={() => { setGameState('analytics'); triggerHaptic('light'); }} className="bg-slate-800 hover:bg-slate-700 text-slate-300 py-5 rounded-[1.5rem] font-black text-sm flex flex-col items-center justify-center gap-1 border border-white/10 active:scale-95"><BarChart3 size={20} /> Geçmiş</button>
-                  </div>
+                  <button onClick={() => { startGame(true); }} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-5 rounded-[1.5rem] font-black text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95"><Calendar size={20} /> Günlük Meydan Okuma</button>
                 </div>
               )}
               {gameState === 'playing' && (
@@ -816,14 +842,55 @@ const App: React.FC = () => {
         {(!isZenMode || !isPlaying) && gameState === 'idle' && (
           <div className="bg-slate-900/20 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white/5 shadow-xl animate-in slide-in-from-bottom-4 duration-700 delay-200 w-full">
              <h3 className="text-white text-xs font-black uppercase tracking-widest mb-6 flex items-center gap-2 opacity-70"><div className="p-0.5"><Info size={14} className="text-indigo-400" /></div> Oyun Parametreleri</h3>
-             <ul className="text-slate-400 text-[10px] space-y-3 font-bold leading-relaxed">
-               {dynamicExplanations.map((exp, idx) => (
-                 <li key={idx} className="flex items-start gap-3">
-                    <div className="shrink-0">{exp.icon}</div>
-                    <span>{exp.text}</span>
-                 </li>
-               ))}
-             </ul>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               <div className="space-y-3">
+                 <div className="flex items-start gap-3">
+                    <div className="shrink-0 p-1 bg-slate-800 rounded-lg"><Brain size={12} className="text-indigo-500" /></div>
+                    <div>
+                      <p className="text-[10px] font-black text-white uppercase tracking-wider mb-0.5">Oyun Modu</p>
+                      <p className="text-[10px] text-slate-400 leading-snug">Hem konumu, hem de harf sesini (ikili) ya da konum, ses ve rengi takip edin (üçlü).</p>
+                    </div>
+                 </div>
+                 <div className="flex items-start gap-3">
+                    <div className="shrink-0 p-1 bg-slate-800 rounded-lg"><Target size={12} className="text-blue-500" /></div>
+                    <div>
+                      <p className="text-[10px] font-black text-white uppercase tracking-wider mb-0.5">Zorluk Derecesi (N)</p>
+                      <p className="text-[10px] text-slate-400 leading-snug">Mevcut uyaranın, N adım önceki uyaranla eşleşip eşleşmediğini bulun.</p>
+                    </div>
+                 </div>
+                 <div className="flex items-start gap-3">
+                    <div className="shrink-0 p-1 bg-slate-800 rounded-lg"><Calendar size={12} className="text-emerald-500" /></div>
+                    <div>
+                      <p className="text-[10px] font-black text-white uppercase tracking-wider mb-0.5">Günlük Yarış</p>
+                      <p className="text-[10px] text-slate-400 leading-snug">Her gün herkes için aynı olan sabit diziyle oynayın ve skorunuzu karşılaştırın.</p>
+                    </div>
+                 </div>
+               </div>
+               
+               <div className="space-y-3">
+                 <div className="flex items-start gap-3">
+                    <div className="shrink-0 p-1 bg-slate-800 rounded-lg"><TrendingUp size={12} className="text-emerald-500" /></div>
+                    <div>
+                      <p className="text-[10px] font-black text-white uppercase tracking-wider mb-0.5">Alıştırma Modu</p>
+                      <p className="text-[10px] text-slate-400 leading-snug">Süre veya dizi sınırı olmadan, hata yapma korkusu yaşamadan pratik yapın.</p>
+                    </div>
+                 </div>
+                 <div className="flex items-start gap-3">
+                    <div className="shrink-0 p-1 bg-slate-800 rounded-lg"><ZapOff size={12} className="text-rose-500" /></div>
+                    <div>
+                      <p className="text-[10px] font-black text-white uppercase tracking-wider mb-0.5">Maraton Modu</p>
+                      <p className="text-[10px] text-slate-400 leading-snug">Tek bir hata yapana kadar oyun devam eder. Ne kadar dayanabilirsiniz?</p>
+                    </div>
+                 </div>
+                 <div className="flex items-start gap-3">
+                    <div className="shrink-0 p-1 bg-slate-800 rounded-lg"><EyeOff size={12} className="text-slate-400" /></div>
+                    <div>
+                      <p className="text-[10px] font-black text-white uppercase tracking-wider mb-0.5">Zen Modu</p>
+                      <p className="text-[10px] text-slate-400 leading-snug">Skor, arayüz ve dikkat dağıtıcılar gizlenir. Sadece akışa odaklanın.</p>
+                    </div>
+                 </div>
+               </div>
+             </div>
           </div>
         )}
       </div>

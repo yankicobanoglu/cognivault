@@ -67,6 +67,7 @@ const App: React.FC = () => {
   const [tutorialStep, setTutorialStep] = useState<TutorialStep | null>(null);
   const [tutorialActiveSquare, setTutorialActiveSquare] = useState<number | null>(null);
   const [tutorialSuccess, setTutorialSuccess] = useState(false);
+  const [showIntro, setShowIntro] = useState(false);
   
   const [sequence, setSequence] = useState<Stimulus[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -119,6 +120,11 @@ const App: React.FC = () => {
     if (savedStats) {
       const stats = JSON.parse(savedStats);
       setUserStats(stats);
+    }
+
+    // Check if intro has been seen
+    if (!localStorage.getItem('has_seen_intro')) {
+      setShowIntro(true);
     }
     
     loadVoices((voice) => {
@@ -426,6 +432,12 @@ const App: React.FC = () => {
     }
   };
 
+  const dismissIntro = () => {
+    localStorage.setItem('has_seen_intro', 'true');
+    setShowIntro(false);
+    triggerHaptic('medium');
+  };
+
   useEffect(() => {
     if (gameState === 'idle') {
       const demoInterval = setInterval(() => setDemoStep(prev => (prev + 1) % 5), 1500);
@@ -461,6 +473,36 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden select-none pb-[max(env(safe-area-inset-bottom),16px)] pt-[max(env(safe-area-inset-top),16px)]">
       <NeuralMesh combo={isPlaying ? combo : 0} />
+
+      {showIntro && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in zoom-in duration-300">
+            <div className="bg-slate-900/80 border border-indigo-500/30 p-8 rounded-[3rem] shadow-2xl max-w-md w-full relative">
+              <div className="flex flex-col items-center">
+                 <div className="p-5 bg-indigo-500/20 rounded-[2rem] mb-6 shadow-inner ring-1 ring-white/10">
+                    <Brain className="text-indigo-400" size={48} />
+                 </div>
+                 <h2 className="text-3xl font-black text-white leading-tight mb-6 text-center">Nasıl Oynanır?</h2>
+                 <div className="text-slate-400 text-sm leading-relaxed space-y-4 text-center mb-8">
+                    <p>
+                      Bu oyun, çalışma belleğini ve odaklanmayı güçlendirmeyi amaçlayan, <span className="text-indigo-400 font-bold">"Dual N-Back"</span> temelli bir zihin egzersizidir.
+                    </p>
+                    <p>
+                      Ekranda sırayla beliren karelerin <span className="text-white font-bold">konumunu</span> ve eş zamanlı olarak okunan <span className="text-white font-bold">harfleri</span> aklınızda tutmanız gerekir.
+                    </p>
+                    <p>
+                      Eğer şu anki konum veya harf, belirlenen seviye sayısı kadar (örneğin 1 adım) <span className="text-white font-bold">öncesindekiyle aynıysa</span>, ilgili butona basarak eşleşmeyi yakalamalısınız.
+                    </p>
+                 </div>
+                 <button 
+                   onClick={dismissIntro}
+                   className="w-full py-5 rounded-[2rem] bg-indigo-600 hover:bg-indigo-500 text-white font-black text-lg flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg"
+                 >
+                   Anladım, Başla <ChevronRight size={22} />
+                 </button>
+              </div>
+            </div>
+        </div>
+      )}
 
       {tutorialStep && (
         <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in zoom-in duration-300">
