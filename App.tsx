@@ -1,4 +1,3 @@
-
 import { Volume2, Square, Play, RotateCcw, Zap, Info, TrendingUp, Trophy, Brain, Palette, Gauge, Target, HelpCircle, XCircle, ChevronRight, CheckCircle2, ArrowLeft, BarChart3, Settings, EyeOff, Calendar, Globe, Flame, Star, ZapOff, Trash2 } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { GameMode, GameState, Stimulus, ScoreDetails, ButtonFeedback, GameSpeed, TutorialStep, ModalityScore, SessionRecord, UserStats } from './types.ts';
@@ -632,7 +631,7 @@ const App: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-2">
-                      <Target size={14} className="text-indigo-500" /> Zorluk Derecesi
+                      <Target size={14} className="text-indigo-500" /> Zorluk Derecesi (N)
                     </label>
                     <div className="flex p-1.5 bg-slate-800/40 rounded-2xl border border-white/5">
                       {[1, 2, 3, 4, 5].map((l) => (
@@ -708,14 +707,9 @@ const App: React.FC = () => {
                     <Play size={28} className="fill-white group-hover:scale-110 transition-transform" />
                     Oyunu Başlat
                   </button>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => startGame(true)} className="bg-emerald-600 hover:bg-emerald-500 text-white py-5 rounded-[1.5rem] font-black text-sm flex flex-col items-center justify-center gap-1 shadow-lg active:scale-95">
-                      <Calendar size={20} /> Günlük Meydan Okuma
-                    </button>
-                    <button onClick={() => setGameState('analytics')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 py-5 rounded-[1.5rem] font-black text-sm flex flex-col items-center justify-center gap-1 border border-white/10 active:scale-95">
-                      <BarChart3 size={20} /> Geçmiş
-                    </button>
-                  </div>
+                  <button onClick={() => startGame(true)} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-5 rounded-[1.5rem] font-black text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95">
+                    <Calendar size={20} /> Günlük Meydan Okuma
+                  </button>
                 </div>
               )}
 
@@ -803,24 +797,57 @@ const App: React.FC = () => {
         )}
 
         {(!isZenMode || !isPlaying) && gameState === 'idle' && (
-          <div className="bg-slate-900/20 backdrop-blur-xl rounded-[2rem] p-6 border border-white/5 shadow-xl animate-in slide-in-from-bottom-4 duration-700 delay-200 w-full">
-             <h3 className="text-white text-xs font-black uppercase tracking-widest mb-4 flex items-center gap-2 opacity-70">
-                <Info size={14} className="text-indigo-400" /> Oyun Parametreleri
-             </h3>
-             <ul className="text-slate-400 text-[10px] space-y-3 font-bold leading-relaxed">
-               <li className="flex items-start gap-3">
-                  <CheckCircle2 size={14} className="text-indigo-500 shrink-0" />
-                  <span>Zorluk: <span className="text-white">N-{level}</span>. Eşleşmeler tam olarak {level} adım öncesi ile yapılır.</span>
-               </li>
-               <li className="flex items-start gap-3">
-                  <Zap size={14} className="text-yellow-500 shrink-0" />
-                  <span>Hedef: İlerleme için <span className="text-white">%90</span> başarı gerekir.</span>
-               </li>
-               <li className="flex items-start gap-3">
-                  <Globe size={14} className="text-emerald-500 shrink-0" />
-                  <span>Meydan Okuma: Bugünün özel dizisinde yarışın!</span>
-               </li>
-             </ul>
+          <div className="bg-slate-900/20 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white/5 shadow-xl animate-in slide-in-from-bottom-4 duration-700 delay-200 w-full">
+             <h3 className="text-white text-xs font-black uppercase tracking-widest mb-6 flex items-center gap-2 opacity-70"><div className="p-0.5"><Info size={14} className="text-indigo-400" /></div> Oyun Parametreleri</h3>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               <div className="space-y-3">
+                 <div className="flex items-start gap-3">
+                    <div className="shrink-0 p-1 bg-slate-800 rounded-lg"><Brain size={12} className="text-indigo-500" /></div>
+                    <div>
+                      <p className="text-[10px] font-black text-white uppercase tracking-wider mb-0.5">Oyun Modu</p>
+                      <p className="text-[10px] text-slate-400 leading-snug">Hem konumu, hem de harf sesini (ikili) ya da konum, ses ve rengi takip edin (üçlü).</p>
+                    </div>
+                 </div>
+                 <div className="flex items-start gap-3">
+                    <div className="shrink-0 p-1 bg-slate-800 rounded-lg"><Target size={12} className="text-blue-500" /></div>
+                    <div>
+                      <p className="text-[10px] font-black text-white uppercase tracking-wider mb-0.5">Zorluk Derecesi (N)</p>
+                      <p className="text-[10px] text-slate-400 leading-snug">Mevcut uyaranın, N adım önceki uyaranla eşleşip eşleşmediğini bulun.</p>
+                    </div>
+                 </div>
+                 <div className="flex items-start gap-3">
+                    <div className="shrink-0 p-1 bg-slate-800 rounded-lg"><Calendar size={12} className="text-emerald-500" /></div>
+                    <div>
+                      <p className="text-[10px] font-black text-white uppercase tracking-wider mb-0.5">Günlük Yarış</p>
+                      <p className="text-[10px] text-slate-400 leading-snug">Her gün herkes için aynı olan sabit diziyle oynayın ve skorunuzu karşılaştırın.</p>
+                    </div>
+                 </div>
+               </div>
+               
+               <div className="space-y-3">
+                 <div className="flex items-start gap-3">
+                    <div className="shrink-0 p-1 bg-slate-800 rounded-lg"><TrendingUp size={12} className="text-emerald-500" /></div>
+                    <div>
+                      <p className="text-[10px] font-black text-white uppercase tracking-wider mb-0.5">Alıştırma Modu</p>
+                      <p className="text-[10px] text-slate-400 leading-snug">Süre veya dizi sınırı olmadan, hata yapma korkusu yaşamadan pratik yapın.</p>
+                    </div>
+                 </div>
+                 <div className="flex items-start gap-3">
+                    <div className="shrink-0 p-1 bg-slate-800 rounded-lg"><ZapOff size={12} className="text-rose-500" /></div>
+                    <div>
+                      <p className="text-[10px] font-black text-white uppercase tracking-wider mb-0.5">Maraton Modu</p>
+                      <p className="text-[10px] text-slate-400 leading-snug">Tek bir hata yapana kadar oyun devam eder. Ne kadar dayanabilirsiniz?</p>
+                    </div>
+                 </div>
+                 <div className="flex items-start gap-3">
+                    <div className="shrink-0 p-1 bg-slate-800 rounded-lg"><EyeOff size={12} className="text-slate-400" /></div>
+                    <div>
+                      <p className="text-[10px] font-black text-white uppercase tracking-wider mb-0.5">Zen Modu</p>
+                      <p className="text-[10px] text-slate-400 leading-snug">Skor, arayüz ve dikkat dağıtıcılar gizlenir. Sadece akışa odaklanın.</p>
+                    </div>
+                 </div>
+               </div>
+             </div>
           </div>
         )}
       </div>
