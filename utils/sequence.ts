@@ -1,6 +1,6 @@
 
 import { Stimulus, GameMode } from '../types.ts';
-import { LETTERS, COLORS } from '../constants.ts';
+import { COLORS } from '../constants.ts';
 
 const mulberry32 = (a: number) => {
   return () => {
@@ -31,7 +31,7 @@ export const findMatches = (seq: Stimulus[], n: number) => {
   return { posMatches, sndMatches, colMatches };
 };
 
-const preventTriplets = (seq: Stimulus[], n: number, mode: GameMode, random: () => number): Stimulus[] => {
+const preventTriplets = (seq: Stimulus[], n: number, mode: GameMode, random: () => number, letters: string[]): Stimulus[] => {
   let matches = findMatches(seq, n);
   const modalities: ('position' | 'sound' | 'color')[] = ['position'];
   if (mode === 'dual' || mode === 'triple') modalities.push('sound');
@@ -60,7 +60,7 @@ const preventTriplets = (seq: Stimulus[], n: number, mode: GameMode, random: () 
             seq[idx2].position = newVal;
           } else if (mod === 'sound') {
             let newVal;
-            do { newVal = LETTERS[Math.floor(random() * LETTERS.length)]; }
+            do { newVal = letters[Math.floor(random() * letters.length)]; }
             while (newVal === seq[idx2 - n].sound || newVal === seq[idx2].sound);
             seq[idx2].sound = newVal;
           } else if (mod === 'color') {
@@ -78,7 +78,7 @@ const preventTriplets = (seq: Stimulus[], n: number, mode: GameMode, random: () 
   return seq;
 };
 
-export const generateSequence = (level: number, mode: GameMode, length: number, seed?: number): Stimulus[] => {
+export const generateSequence = (level: number, mode: GameMode, length: number, letters: string[], seed?: number): Stimulus[] => {
   const random = seed !== undefined ? mulberry32(seed) : Math.random;
   const minMatches = Math.floor(random() * 4) + 5; 
   
@@ -94,12 +94,12 @@ export const generateSequence = (level: number, mode: GameMode, length: number, 
     lastPosition = newPosition;
     seq.push({
       position: newPosition,
-      sound: LETTERS[Math.floor(random() * LETTERS.length)],
+      sound: letters[Math.floor(random() * letters.length)],
       color: COLORS[Math.floor(random() * COLORS.length)]
     });
   }
 
-  seq = preventTriplets(seq, level, mode, random);
+  seq = preventTriplets(seq, level, mode, random, letters);
   
   const injectMatches = (modality: 'position' | 'sound' | 'color') => {
     let current = findMatches(seq, level);
@@ -141,7 +141,7 @@ export const generateSequence = (level: number, mode: GameMode, length: number, 
   if (mode === 'dual' || mode === 'triple') injectMatches('sound');
   if (mode === 'triple') injectMatches('color');
   
-  seq = preventTriplets(seq, level, mode, random);
+  seq = preventTriplets(seq, level, mode, random, letters);
   
   return seq;
 };

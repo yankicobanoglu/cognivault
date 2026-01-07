@@ -1,8 +1,8 @@
 
 {
-  "name": "Canım Anam",
-  "short_name": "Canım Anam",
-  "description": "Hafıza Oyunu",
+  "name": "Dual N-Backer",
+  "short_name": "N-Backer",
+  "description": "Memory Game",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#020617",

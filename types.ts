@@ -2,6 +2,7 @@
 export type GameMode = 'position' | 'dual' | 'triple';
 export type GameState = 'idle' | 'playing' | 'finished' | 'analytics';
 export type GameSpeed = 'slow' | 'normal' | 'fast';
+export type Language = 'tr' | 'en';
 
 export interface Stimulus {
   position: number;
@@ -37,6 +38,7 @@ export interface SessionRecord {
   xpEarned: number;
   details: ScoreDetails;
   reactionTimes: number[];
+  missedPositions: number[];
   isDaily: boolean;
 }
 

@@ -1,9 +1,15 @@
-const CACHE_NAME = 'cognivault-v4';
+
+const CACHE_NAME = 'cognivault-v5';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './index.tsx'
+  './index.tsx',
+  './App.tsx',
+  './types.ts',
+  './constants.ts',
+  './utils/speech.ts',
+  './utils/sequence.ts'
 ];
 
 self.addEventListener('install', (event) => {

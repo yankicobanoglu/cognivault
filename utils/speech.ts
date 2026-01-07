@@ -1,4 +1,6 @@
-import { PHONETIC_MAP } from '../constants.ts';
+
+import { PHONETIC_MAP_TR } from '../constants.ts';
+import { Language } from '../types.ts';
 
 let isUnlocked = false;
 
@@ -27,7 +29,7 @@ export const unlockAudio = () => {
   isUnlocked = true;
 };
 
-export const speakLetter = (letter: string, voice?: SpeechSynthesisVoice | null) => {
+export const speakLetter = (letter: string, lang: Language, voice?: SpeechSynthesisVoice | null) => {
   const synth = window.speechSynthesis;
   
   // Ensure engine is active
@@ -38,17 +40,22 @@ export const speakLetter = (letter: string, voice?: SpeechSynthesisVoice | null)
   synth.cancel();
 
   setTimeout(() => {
-    let rate = 0.7;
-    if (['A', 'O', 'U'].includes(letter)) {
-      rate = 0.85;
-    } else if (['E', 'İ'].includes(letter)) {
-      rate = 0.8;
+    let rate = 0.8; 
+    let text = letter.toLowerCase();
+    let langCode = lang === 'tr' ? 'tr-TR' : 'en-US';
+
+    if (lang === 'tr') {
+       if (['A', 'O', 'U'].includes(letter)) rate = 0.85;
+       else if (['E', 'İ'].includes(letter)) rate = 0.8;
+       text = PHONETIC_MAP_TR[letter] || letter.toLowerCase();
+    } else {
+       // Simple English adjustments if needed, though default usually works well
+       rate = 0.9;
     }
 
-    const text = PHONETIC_MAP[letter] || letter.toLowerCase();
     const utterance = new SpeechSynthesisUtterance(text);
     
-    utterance.lang = 'tr-TR';
+    utterance.lang = langCode;
     if (voice) {
       utterance.voice = voice;
     }
@@ -69,17 +76,22 @@ export const speakLetter = (letter: string, voice?: SpeechSynthesisVoice | null)
   }, 50); // Increased delay slightly for Android stability
 };
 
-export const loadVoices = (callback: (voice: SpeechSynthesisVoice | null) => void) => {
+export const loadVoices = (lang: Language, callback: (voice: SpeechSynthesisVoice | null) => void) => {
   const synth = window.speechSynthesis;
   let attempts = 0;
   
   const findVoice = () => {
     const voices = synth.getVoices();
     if (voices.length > 0) {
-      // Prioritize Google Turkish voice on Android
-      const turkishVoice = voices.find(v => v.lang === 'tr-TR' || v.lang === 'tr_TR') 
-                        || voices.find(v => v.lang.startsWith('tr'));
-      callback(turkishVoice || null);
+      let targetVoice;
+      if (lang === 'tr') {
+        targetVoice = voices.find(v => v.lang === 'tr-TR' || v.lang === 'tr_TR') 
+                      || voices.find(v => v.lang.startsWith('tr'));
+      } else {
+        targetVoice = voices.find(v => v.lang === 'en-US' || v.lang === 'en_US' || v.lang === 'en-GB')
+                      || voices.find(v => v.lang.startsWith('en'));
+      }
+      callback(targetVoice || null);
       return true;
     }
     return false;
