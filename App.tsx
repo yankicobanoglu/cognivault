@@ -1,4 +1,5 @@
-import { Volume2, Square, Play, RotateCcw, Zap, Info, TrendingUp, Trophy, Brain, Palette, Gauge, Target, HelpCircle, XCircle, ChevronRight, CheckCircle2, ArrowLeft, BarChart3, Settings, EyeOff, Calendar, Globe, Flame, Star, ZapOff, Trash2 } from 'lucide-react';
+
+import { Volume2, Square, Play, RotateCcw, Zap, Info, TrendingUp, Trophy, Brain, Palette, Gauge, Target, HelpCircle, XCircle, ChevronRight, CheckCircle2, ArrowLeft, BarChart3, Settings, EyeOff, Calendar, Globe, Flame, Star, ZapOff, Trash2, Swords, Share2 } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { GameMode, GameState, Stimulus, ScoreDetails, ButtonFeedback, GameSpeed, TutorialStep, ModalityScore, SessionRecord, UserStats } from './types.ts';
 import { getSequenceLength, SPEED_SETTINGS, STIMULUS_DURATION, LETTERS, COLORS, RANKS, XP_MULTIPLIERS } from './constants.ts';
@@ -39,6 +40,14 @@ const NeuralMesh: React.FC<{ combo: number }> = ({ combo }) => {
   );
 };
 
+interface IncomingChallenge {
+  seed: number;
+  level: number;
+  mode: GameMode;
+  speed: GameSpeed;
+  targetScore?: number;
+}
+
 const App: React.FC = () => {
   const [level, setLevel] = useState(1);
   const [gameMode, setGameMode] = useState<GameMode>('dual');
@@ -49,6 +58,11 @@ const App: React.FC = () => {
   const [isZenMode, setIsZenMode] = useState(false);
   const [isDailyChallenge, setIsDailyChallenge] = useState(false);
   
+  // Challenge State
+  const [challengeSeed, setChallengeSeed] = useState<number | null>(null);
+  const [isChallengeCreator, setIsChallengeCreator] = useState(false);
+  const [incomingChallenge, setIncomingChallenge] = useState<IncomingChallenge | null>(null);
+
   const [userStats, setUserStats] = useState<UserStats>({
     xp: 0,
     streak: 0,
@@ -106,6 +120,36 @@ const App: React.FC = () => {
     const rank = [...RANKS].reverse().find(r => userStats.xp >= r.minXp);
     return rank ? rank.name : RANKS[0].name;
   }, [userStats.xp]);
+
+  // URL Parser for Incoming Challenges
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const cMode = params.get('type'); // 'challenge'
+    
+    if (cMode === 'challenge') {
+      const cSeed = parseInt(params.get('seed') || '0');
+      const cLevel = parseInt(params.get('level') || '1');
+      const cGameMode = (params.get('mode') as GameMode) || 'position';
+      const cSpeed = (params.get('speed') as GameSpeed) || 'normal';
+      const cTarget = parseInt(params.get('score') || '0');
+
+      if (cSeed) {
+        setIncomingChallenge({
+          seed: cSeed,
+          level: cLevel,
+          mode: cGameMode,
+          speed: cSpeed,
+          targetScore: cTarget
+        });
+        // Pre-set settings
+        setLevel(cLevel);
+        setGameMode(cGameMode);
+        setSpeed(cSpeed);
+        // Clear query params to clean URL (optional, but looks nicer)
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if ((window as any).hideAppLoader) {
@@ -229,10 +273,33 @@ const App: React.FC = () => {
     triggerHaptic(percentage > 80 ? 'success' : 'medium');
   }, [calculateFinalScore, level, gameMode, isDailyChallenge, userStats, speed]);
 
-  const startGame = (isDaily = false) => {
+  const startGame = (isDaily = false, isChallengeCreation = false) => {
     setIsDailyChallenge(isDaily);
+    setIsChallengeCreator(isChallengeCreation);
+    
+    // Seed Logic:
+    // 1. Daily Challenge -> Date Seed
+    // 2. Creating Challenge -> New Random Seed
+    // 3. Accepting Challenge -> Incoming Seed
+    // 4. Normal Game -> Undefined (Random)
+    let seed: number | undefined = undefined;
+
+    if (isDaily) {
+      seed = new Date().setHours(0,0,0,0);
+      setChallengeSeed(null); // Reset
+    } else if (isChallengeCreation) {
+      const newSeed = Math.floor(Math.random() * 10000000);
+      seed = newSeed;
+      setChallengeSeed(newSeed);
+    } else if (incomingChallenge && !isPractice && !isMarathon) {
+       // Playing an accepted challenge
+       seed = incomingChallenge.seed;
+       setChallengeSeed(seed);
+    } else {
+      setChallengeSeed(null); // Normal game
+    }
+
     const len = getSequenceLength(level, isPractice || isMarathon);
-    const seed = isDaily ? new Date().setHours(0,0,0,0) : undefined;
     const seq = generateSequence(level, gameMode, len, seed);
     const matches = findMatches(seq, level);
     
@@ -253,6 +320,11 @@ const App: React.FC = () => {
     setGameState('playing');
     setIsPlaying(true);
     triggerHaptic('medium');
+    
+    // If playing an accepted challenge, we consume it so next game is normal unless re-clicked
+    if (incomingChallenge && !isChallengeCreation) {
+        setIncomingChallenge(null);
+    }
   };
 
   const playNextStimulus = useCallback(() => {
@@ -376,13 +448,15 @@ const App: React.FC = () => {
 
   const resetGame = () => {
     window.speechSynthesis.cancel();
-    if (scoreDetails && scoreDetails.overall.percentage >= 90 && level < 9) {
+    if (scoreDetails && scoreDetails.overall.percentage >= 90 && level < 9 && !isChallengeCreator && !incomingChallenge) {
       setLevel(prev => prev + 1);
-    } else if (scoreDetails && scoreDetails.overall.percentage < 60 && level > 1) {
+    } else if (scoreDetails && scoreDetails.overall.percentage < 60 && level > 1 && !isChallengeCreator && !incomingChallenge) {
       setLevel(prev => prev - 1);
     }
     setGameState('idle');
     triggerHaptic('light');
+    setChallengeSeed(null);
+    setIsChallengeCreator(false);
   };
 
   const removeAllProgress = () => {
@@ -395,6 +469,64 @@ const App: React.FC = () => {
       setGameState('idle');
       triggerHaptic('error');
     }
+  };
+
+  const handleShare = async (title: string, text: string, challengeUrl?: string) => {
+    const isWeb = window.location.protocol.startsWith('http');
+    const shareData: any = {
+      title,
+      text,
+    };
+    
+    const urlToShare = challengeUrl || window.location.href;
+    if (isWeb) {
+      shareData.url = urlToShare;
+    }
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        console.error('Share failed', err);
+        if (err instanceof Error && err.name !== 'AbortError') {
+             try {
+                const clipboardText = `${title}\n${text}${isWeb ? `\n${urlToShare}` : ''}`;
+                await navigator.clipboard.writeText(clipboardText);
+                alert('Panoya kopyalandı!');
+            } catch (e) {
+                console.error('Clipboard failed', e);
+            }
+        }
+      }
+    } else {
+      try {
+        const clipboardText = `${title}\n${text}${isWeb ? `\n${urlToShare}` : ''}`;
+        await navigator.clipboard.writeText(clipboardText);
+        alert('Bağlantı panoya kopyalandı!');
+      } catch (e) {
+        console.error('Clipboard failed', e);
+      }
+    }
+  };
+  
+  const createChallengeLink = () => {
+    if (!scoreDetails || !challengeSeed) return;
+    
+    const baseUrl = window.location.href.split('?')[0];
+    const params = new URLSearchParams();
+    params.set('type', 'challenge');
+    params.set('seed', challengeSeed.toString());
+    params.set('level', level.toString());
+    params.set('mode', gameMode);
+    params.set('speed', speed);
+    params.set('score', scoreDetails.overall.percentage.toString());
+    
+    const fullUrl = `${baseUrl}?${params.toString()}`;
+    handleShare(
+        'Sana Meydan Okuyorum!', 
+        `Canım Anam oyununda N-${level} seviyesinde %${scoreDetails.overall.percentage} skor yaptım. Bakalım beni geçebilecek misin?`,
+        fullUrl
+    );
   };
 
   const testSound = () => {
@@ -472,6 +604,48 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden select-none pb-[max(env(safe-area-inset-bottom),16px)] pt-[max(env(safe-area-inset-top),16px)]">
       <NeuralMesh combo={isPlaying ? combo : 0} />
+      
+      {/* Incoming Challenge Modal */}
+      {incomingChallenge && gameState === 'idle' && !tutorialStep && !showIntro && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in zoom-in duration-300">
+          <div className="bg-slate-900/80 border border-indigo-500/30 p-8 rounded-[3rem] shadow-2xl max-w-md w-full relative">
+            <div className="flex flex-col items-center">
+                <div className="p-5 bg-orange-500/20 rounded-[2rem] mb-6 shadow-inner ring-1 ring-white/10 animate-pulse">
+                  <Swords className="text-orange-400" size={48} />
+                </div>
+                <h2 className="text-2xl font-black text-white leading-tight mb-2 text-center">Bir Meydan Okuman Var!</h2>
+                <div className="text-slate-400 text-sm mb-6 text-center">
+                  Arkadaşın bu ayarlarda <b>%{incomingChallenge.targetScore}</b> skor yaptı.
+                  <br/>Onu geçebilir misin?
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 w-full mb-6">
+                    <div className="bg-slate-950/50 p-3 rounded-xl border border-white/5 text-center">
+                        <div className="text-[10px] text-slate-500 font-bold uppercase">Seviye</div>
+                        <div className="text-xl font-black text-white">N-{incomingChallenge.level}</div>
+                    </div>
+                     <div className="bg-slate-950/50 p-3 rounded-xl border border-white/5 text-center">
+                        <div className="text-[10px] text-slate-500 font-bold uppercase">Mod</div>
+                        <div className="text-xl font-black text-white capitalize">{incomingChallenge.mode === 'position' ? 'Konum' : incomingChallenge.mode === 'dual' ? 'İkili' : 'Üçlü'}</div>
+                    </div>
+                </div>
+
+                <button 
+                  onClick={() => startGame(false, false)}
+                  className="w-full py-5 rounded-[2rem] bg-orange-600 hover:bg-orange-500 text-white font-black text-lg flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg"
+                >
+                  Meydan Okumayı Kabul Et
+                </button>
+                <button 
+                  onClick={() => setIncomingChallenge(null)}
+                  className="mt-4 text-slate-500 text-xs font-bold hover:text-white"
+                >
+                  Reddet ve Normal Oyna
+                </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showIntro && (
         <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in zoom-in duration-300">
@@ -517,15 +691,22 @@ const App: React.FC = () => {
                 <h2 className="text-3xl font-black text-white leading-tight">
                   {tutorialStep === 'welcome' ? 'Nasıl Oynanır' : tutorialStep === 'ready' ? 'Göreve Hazır' : 'Zihin Eğitimi'}
                 </h2>
-                <p className="text-slate-400 text-sm leading-relaxed px-2">
+                <div className="text-slate-400 text-sm leading-relaxed px-2">
                   {tutorialStep === 'welcome' && "Hoş geldiniz. Bu protokol çalışma belleği kapasitenizi hızla artırır. Kalibrasyona başlayalım."}
                   {tutorialStep === 'demo_step_1' && "N=1 için karemizin mevcut yerini aklınızda tutun. İlk konum işaretlendi."}
                   {tutorialStep === 'demo_step_2' && "Yeni bir konum işaretlendi. Şimdi bir önceki kareyle karşılaştırma yapacağız."}
-                  {tutorialStep === 'demo_step_3' && "Harika! Şimdi yanan kare az öncekiyle (N=1) aynı yere denk geldi. KONUM butonuna basın!"}
+                  {tutorialStep === 'demo_step_3' && (
+                    <div className="flex flex-col items-center gap-4">
+                      <span>N=1 modunda, mevcut kare az önceki kareyle aynı yerdeyse KONUM butonuna basın!</span>
+                      {!tutorialSuccess && (
+                        <button onClick={() => handlePositionClick()} className="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm animate-bounce shadow-lg">KONUM BUTONU</button>
+                      )}
+                    </div>
+                  )}
                   {tutorialStep === 'ready' && "Hazırlık tamamlandı. Kontroller: A (Konum), L (Ses), S (Renk). Başarılar."}
-                </p>
+                </div>
                 {['demo_step_1', 'demo_step_2', 'demo_step_3'].includes(tutorialStep) && (
-                  <div className="grid grid-cols-3 gap-2 aspect-square w-32 mx-auto p-3 bg-slate-950/80 rounded-3xl border border-white/5 shadow-2xl">
+                  <div className="grid grid-cols-3 gap-2 aspect-square w-32 mx-auto p-3 bg-slate-950/80 rounded-3xl border border-white/5 shadow-2xl mt-4">
                     {[...Array(9)].map((_, i) => (
                       <div key={i} className={`rounded-xl transition-all duration-300 aspect-square ${tutorialActiveSquare === i ? 'bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
                     ))}
@@ -624,11 +805,11 @@ const App: React.FC = () => {
         )}
 
         {gameState !== 'analytics' && gameState !== 'finished' && (
-          <div className={`transition-all duration-700 w-full flex flex-col items-center ${isZenMode && isPlaying ? 'gap-12' : 'bg-slate-900/30 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 shadow-2xl'}`}>
+          <div className={`transition-all duration-700 w-full flex flex-col items-center ${isZenMode && isPlaying ? 'gap-12' : 'bg-slate-900/30 backdrop-blur-3xl border border-white/10 rounded-[2rem] sm:rounded-[3rem] p-5 sm:p-8 shadow-2xl'}`}>
             
             {gameState === 'idle' && (
               <div className="space-y-6 mb-8 animate-in fade-in duration-500 w-full">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
                     <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-2">
                       <Target size={14} className="text-indigo-500" /> Zorluk Derecesi (N)
@@ -645,14 +826,14 @@ const App: React.FC = () => {
                     </label>
                     <div className="flex p-1.5 bg-slate-800/40 rounded-2xl border border-white/5">
                       {(['position', 'dual', 'triple'] as GameMode[]).map((m) => (
-                        <button key={m} onClick={() => { setGameMode(m); triggerHaptic('light'); }} className={`flex-1 py-2 rounded-xl font-black text-[10px] transition-all active:scale-90 ${gameMode === m ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400'}`}>
+                        <button key={m} onClick={() => { setGameMode(m); triggerHaptic('light'); }} className={`flex-1 min-w-0 py-2 rounded-xl font-black text-[10px] transition-all active:scale-90 ${gameMode === m ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400'}`}>
                           {m === 'position' ? 'Konum' : m === 'dual' ? 'İkili' : 'Üçlü'}
                         </button>
                       ))}
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
                     <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-2">
                       <Gauge size={14} className="text-yellow-500" /> Oyun Ritmi
@@ -707,9 +888,14 @@ const App: React.FC = () => {
                     <Play size={28} className="fill-white group-hover:scale-110 transition-transform" />
                     Oyunu Başlat
                   </button>
-                  <button onClick={() => startGame(true)} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-5 rounded-[1.5rem] font-black text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95">
-                    <Calendar size={20} /> Günlük Meydan Okuma
-                  </button>
+                  <div className="flex gap-4">
+                      <button onClick={() => startGame(true)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-5 rounded-[1.5rem] font-black text-xs flex items-center justify-center gap-2 shadow-lg active:scale-95">
+                        <Calendar size={18} /> Günlük Yarış
+                      </button>
+                      <button onClick={() => startGame(false, true)} className="flex-1 bg-orange-600 hover:bg-orange-500 text-white py-5 rounded-[1.5rem] font-black text-xs flex items-center justify-center gap-2 shadow-lg active:scale-95">
+                        <Swords size={18} /> Meydan Oku
+                      </button>
+                  </div>
                 </div>
               )}
 
@@ -772,27 +958,26 @@ const App: React.FC = () => {
         )}
 
         {gameState === 'finished' && scoreDetails && (
-          <div className="space-y-6 animate-in zoom-in-95 duration-500 w-full flex flex-col items-center">
-            <div className="bg-slate-950/60 p-10 rounded-[3rem] border border-white/10 text-center relative overflow-hidden shadow-inner w-full">
-              <div className="absolute top-0 right-0 p-8 opacity-5 -rotate-12"><Trophy size={120} /></div>
-              <h2 className="text-3xl font-black text-indigo-400 mb-2">
-                 {scoreDetails.overall.percentage >= 90 ? 'Mükemmel Seans!' :
-                  scoreDetails.overall.percentage >= 70 ? 'Harika Seans!' :
-                  scoreDetails.overall.percentage >= 40 ? 'Zihin Odaklı Seans' :
-                  'Geliştirilmeli'}
-              </h2>
-              <div className="text-8xl font-black text-white my-8 tracking-tighter drop-shadow-2xl">
-                {scoreDetails.overall.percentage}<span className="text-indigo-500 text-4xl">%</span>
-              </div>
-              <div className="flex justify-center gap-4 text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">
-                 <span className="flex items-center gap-1"><CheckCircle2 size={12} className="text-emerald-500" /> {scoreDetails.overall.totalCorrect} DOĞRU</span>
-                 <span className="flex items-center gap-1"><ZapOff size={12} className="text-rose-500" /> {scoreDetails.overall.totalFalseAlarms} HATA</span>
-              </div>
+          <div className="w-full max-w-xl mx-auto space-y-6 animate-in zoom-in-95 duration-500 text-center py-8">
+            <div className="bg-slate-950/60 p-10 rounded-[3rem] border border-white/10 shadow-inner relative overflow-hidden w-full">
+              <div className="absolute top-0 right-0 p-8 opacity-5 rotate-12"><Trophy size={140} /></div>
+              <h2 className="text-3xl font-black text-indigo-400 mb-2 uppercase tracking-tight">{scoreDetails.overall.percentage >= 90 ? 'Mükemmel Seans!' : 'Seans Tamamlandı'}</h2>
+              <div className="text-8xl font-black text-white my-8 tracking-tighter">{scoreDetails.overall.percentage}<span className="text-indigo-500 text-4xl">%</span></div>
+              <div className="flex justify-center gap-4 text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]"><span className="flex items-center gap-1"><CheckCircle2 size={12} className="text-emerald-500" /> {scoreDetails.overall.totalCorrect} DOĞRU</span><span className="flex items-center gap-1"><ZapOff size={12} className="text-rose-500" /> {scoreDetails.overall.totalFalseAlarms} HATA</span></div>
             </div>
-            <button onClick={resetGame} className="w-full bg-indigo-600 text-white py-6 rounded-[2rem] font-black text-xl flex items-center justify-center gap-4 shadow-xl shadow-indigo-600/30 active:scale-95 group">
-              <RotateCcw size={24} className="group-hover:rotate-180 transition-transform duration-500" />
-              Menüye Dön
-            </button>
+            
+            {isChallengeCreator ? (
+               <div className="flex flex-col gap-4">
+                   <div className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Meydan Okuma Hazır</div>
+                   <button onClick={() => createChallengeLink()} className="w-full bg-orange-600 text-white py-6 rounded-[2rem] font-black text-xl flex items-center justify-center gap-4 active:scale-95 shadow-lg group animate-pulse"><Swords size={24} /> Bağlantıyı Paylaş</button>
+                   <button onClick={() => { resetGame(); }} className="w-full bg-slate-800 text-slate-400 py-4 rounded-[2rem] font-black text-sm flex items-center justify-center gap-2 active:scale-95">Vazgeç ve Dön</button>
+               </div>
+            ) : (
+                <div className="flex gap-4">
+                   <button onClick={() => { resetGame(); }} className="flex-[2] bg-indigo-600 text-white py-6 rounded-[2rem] font-black text-xl flex items-center justify-center gap-4 active:scale-95 shadow-lg group"><RotateCcw size={24} className="group-hover:rotate-180 transition-transform duration-500" /> Menüye Dön</button>
+                   <button onClick={() => handleShare('Yeni Skor!', `Canım Anam oyununda N-${level} seviyesinde %${scoreDetails.overall.percentage} skor yaptım!`)} className="flex-1 bg-emerald-600 text-white py-6 rounded-[2rem] font-black text-xl flex items-center justify-center gap-2 active:scale-95 shadow-lg"><Share2 size={24} /></button>
+                </div>
+            )}
           </div>
         )}
 
