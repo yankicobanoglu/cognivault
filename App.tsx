@@ -162,6 +162,16 @@ const App: React.FC = () => {
     if (savedHistory) setHistory(JSON.parse(savedHistory));
     if (savedStats) {
       const stats = JSON.parse(savedStats);
+      
+      // Check for broken streaks on load
+      const today = new Date().setHours(0,0,0,0);
+      const yesterday = today - 86400000;
+      
+      // If last played was before yesterday (and not 0), the streak is broken
+      if (stats.lastPlayed > 0 && stats.lastPlayed < yesterday) {
+        stats.streak = 0;
+      }
+
       setUserStats(stats);
     }
 
@@ -236,14 +246,19 @@ const App: React.FC = () => {
     const totalXP = Math.round(baseXP * modeMult * speedMult * levelMult);
 
     const today = new Date().setHours(0,0,0,0);
+    const yesterday = today - 86400000;
+    
     let newStreak = userStats.streak;
-    if (userStats.lastPlayed === today - 86400000) {
+    
+    // Streak Logic
+    if (userStats.lastPlayed === yesterday) {
       newStreak += 1;
-    } else if (userStats.lastPlayed < today - 86400000) {
+    } else if (userStats.lastPlayed < yesterday) {
       newStreak = 1;
     } else if (userStats.lastPlayed === 0) {
       newStreak = 1;
     }
+    // If lastPlayed === today, streak remains same (handled by preserving newStreak = userStats.streak)
 
     const record: SessionRecord = {
       id: Date.now().toString(),
