@@ -42,6 +42,7 @@ export interface SessionRecord {
   xpEarned: number;
   details: ScoreDetails;
   reactionTimes: number[];
+  missedPositions: number[]; // Store the actual grid positions (0-8) that were missed
   isDaily: boolean;
 }
 
@@ -130,7 +131,6 @@ export const XP_MULTIPLIERS = {
 // --- UTILS: SPEECH ---
 let isUnlocked = false;
 
-// Android often pauses the speech engine. We must resume it before speaking.
 const resumeAudio = () => {
   if (window.speechSynthesis.paused) {
     window.speechSynthesis.resume();
@@ -139,17 +139,12 @@ const resumeAudio = () => {
 
 export const unlockAudio = () => {
   if (isUnlocked) return;
-  
   const synth = window.speechSynthesis;
-  // Create a silent, short utterance to "wake up" the engine on mobile
   const utterance = new SpeechSynthesisUtterance(" ");
-  utterance.volume = 0.1; // Android ignores 0 volume sometimes, use 0.1
+  utterance.volume = 0.1;
   utterance.rate = 1;
   utterance.pitch = 1;
-  
-  // Force resume before trying to unlock
   resumeAudio();
-  
   synth.cancel();
   synth.speak(utterance);
   isUnlocked = true;
@@ -157,12 +152,7 @@ export const unlockAudio = () => {
 
 export const speakLetter = (letter: string, voice?: SpeechSynthesisVoice | null) => {
   const synth = window.speechSynthesis;
-  
-  // Ensure engine is active
   resumeAudio();
-
-  // Cancel previous speech to prevent queue buildup, but use a tiny delay
-  // because Android can crash if cancel/speak happen instantly together.
   synth.cancel();
 
   setTimeout(() => {
@@ -185,16 +175,14 @@ export const speakLetter = (letter: string, voice?: SpeechSynthesisVoice | null)
     utterance.volume = 1.0;
     utterance.pitch = 1.0;
     
-    // Error handling for the specific utterance
     utterance.onerror = (e) => {
       console.warn("Speech error:", e);
-      // Try to revive the engine if it crashes
       synth.cancel();
       resumeAudio();
     };
 
     synth.speak(utterance);
-  }, 50); // Increased delay slightly for Android stability
+  }, 50);
 };
 
 export const loadVoices = (callback: (voice: SpeechSynthesisVoice | null) => void) => {
@@ -204,7 +192,6 @@ export const loadVoices = (callback: (voice: SpeechSynthesisVoice | null) => voi
   const findVoice = () => {
     const voices = synth.getVoices();
     if (voices.length > 0) {
-      // Prioritize Google Turkish voice on Android
       const turkishVoice = voices.find(v => v.lang === 'tr-TR' || v.lang === 'tr_TR') 
                         || voices.find(v => v.lang.startsWith('tr'));
       callback(turkishVoice || null);
@@ -213,18 +200,15 @@ export const loadVoices = (callback: (voice: SpeechSynthesisVoice | null) => voi
     return false;
   };
   
-  // Try immediately
   if (findVoice()) return;
 
-  // Polling fallback for Android which loads voices asynchronously without always firing onvoiceschanged correctly
   const intervalId = setInterval(() => {
     attempts++;
-    if (findVoice() || attempts > 20) { // Stop after 2 seconds (20 * 100ms)
+    if (findVoice() || attempts > 20) {
       clearInterval(intervalId);
     }
   }, 100);
 
-  // Standard event listener
   synth.onvoiceschanged = () => {
     findVoice();
     clearInterval(intervalId);
@@ -422,7 +406,7 @@ interface IncomingChallenge {
 
 const App: React.FC = () => {
   const [level, setLevel] = useState(1);
-  const [gameMode, setGameMode] = useState<GameMode>('dual');
+  const [gameMode, setGameMode] = useState<GameMode>('position'); // Default changed to position
   const [gameState, setGameState] = useState<GameState>('idle');
   const [speed, setSpeed] = useState<GameSpeed>('normal');
   const [isPractice, setIsPractice] = useState(false);
@@ -430,7 +414,6 @@ const App: React.FC = () => {
   const [isZenMode, setIsZenMode] = useState(false);
   const [isDailyChallenge, setIsDailyChallenge] = useState(false);
   
-  // Challenge State
   const [challengeSeed, setChallengeSeed] = useState<number | null>(null);
   const [isChallengeCreator, setIsChallengeCreator] = useState(false);
   const [incomingChallenge, setIncomingChallenge] = useState<IncomingChallenge | null>(null);
@@ -493,10 +476,9 @@ const App: React.FC = () => {
     return rank ? rank.name : RANKS[0].name;
   }, [userStats.xp]);
 
-  // URL Parser for Incoming Challenges
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const cMode = params.get('type'); // 'challenge'
+    const cMode = params.get('type');
     
     if (cMode === 'challenge') {
       const cSeed = parseInt(params.get('seed') || '0');
@@ -513,11 +495,9 @@ const App: React.FC = () => {
           speed: cSpeed,
           targetScore: cTarget
         });
-        // Pre-set settings
         setLevel(cLevel);
         setGameMode(cGameMode);
         setSpeed(cSpeed);
-        // Clear query params to clean URL (optional, but looks nicer)
         window.history.replaceState({}, '', window.location.pathname);
       }
     }
@@ -534,20 +514,14 @@ const App: React.FC = () => {
     if (savedHistory) setHistory(JSON.parse(savedHistory));
     if (savedStats) {
       const stats = JSON.parse(savedStats);
-      
-      // Check for broken streaks on load
       const today = new Date().setHours(0,0,0,0);
       const yesterday = today - 86400000;
-      
-      // If last played was before yesterday (and not 0), the streak is broken
       if (stats.lastPlayed > 0 && stats.lastPlayed < yesterday) {
         stats.streak = 0;
       }
-
       setUserStats(stats);
     }
 
-    // Check if intro has been seen
     if (!localStorage.getItem('has_seen_intro')) {
       setShowIntro(true);
     }
@@ -621,8 +595,6 @@ const App: React.FC = () => {
     const yesterday = today - 86400000;
     
     let newStreak = userStats.streak;
-    
-    // Streak Logic
     if (userStats.lastPlayed === yesterday) {
       newStreak += 1;
     } else if (userStats.lastPlayed < yesterday) {
@@ -630,7 +602,10 @@ const App: React.FC = () => {
     } else if (userStats.lastPlayed === 0) {
       newStreak = 1;
     }
-    // If lastPlayed === today, streak remains same (handled by preserving newStreak = userStats.streak)
+
+    // Determine missed positions (Heatmap data)
+    const missedIndices = positionMatches.filter(idx => !userPositionInputs.current.includes(idx));
+    const missedGridPositions = missedIndices.map(idx => sequence[idx].position);
 
     const record: SessionRecord = {
       id: Date.now().toString(),
@@ -641,6 +616,7 @@ const App: React.FC = () => {
       xpEarned: totalXP,
       details: finalDetails,
       reactionTimes: reactionTimes.current,
+      missedPositions: missedGridPositions,
       isDaily: isDailyChallenge
     };
 
@@ -658,32 +634,26 @@ const App: React.FC = () => {
     setIsPlaying(false);
     setCombo(0);
     triggerHaptic(percentage > 80 ? 'success' : 'medium');
-  }, [calculateFinalScore, level, gameMode, isDailyChallenge, userStats, speed]);
+  }, [calculateFinalScore, level, gameMode, isDailyChallenge, userStats, speed, sequence, positionMatches]);
 
   const startGame = (isDaily = false, isChallengeCreation = false) => {
     setIsDailyChallenge(isDaily);
     setIsChallengeCreator(isChallengeCreation);
     
-    // Seed Logic:
-    // 1. Daily Challenge -> Date Seed
-    // 2. Creating Challenge -> New Random Seed
-    // 3. Accepting Challenge -> Incoming Seed
-    // 4. Normal Game -> Undefined (Random)
     let seed: number | undefined = undefined;
 
     if (isDaily) {
       seed = new Date().setHours(0,0,0,0);
-      setChallengeSeed(null); // Reset
+      setChallengeSeed(null); 
     } else if (isChallengeCreation) {
       const newSeed = Math.floor(Math.random() * 10000000);
       seed = newSeed;
       setChallengeSeed(newSeed);
     } else if (incomingChallenge && !isPractice && !isMarathon) {
-       // Playing an accepted challenge
        seed = incomingChallenge.seed;
        setChallengeSeed(seed);
     } else {
-      setChallengeSeed(null); // Normal game
+      setChallengeSeed(null);
     }
 
     const len = getSequenceLength(level, isPractice || isMarathon);
@@ -708,7 +678,6 @@ const App: React.FC = () => {
     setIsPlaying(true);
     triggerHaptic('medium');
     
-    // If playing an accepted challenge, we consume it so next game is normal unless re-clicked
     if (incomingChallenge && !isChallengeCreation) {
         setIncomingChallenge(null);
     }
@@ -759,6 +728,14 @@ const App: React.FC = () => {
     return () => clearTimeout(timerId);
   }, [isPlaying, gameState, playNextStimulus, speed]);
 
+  const recordReactionTime = () => {
+    if (currentStimulusStartTime.current > 0) {
+      const now = Date.now();
+      const rt = now - currentStimulusStartTime.current;
+      reactionTimes.current.push(rt);
+    }
+  };
+
   const handlePositionClick = () => {
     if (tutorialStep === 'demo_step_3') {
       setTutorialSuccess(true);
@@ -780,6 +757,7 @@ const App: React.FC = () => {
     setTimeout(() => setButtonFeedback(prev => ({ ...prev, position: false })), 200);
 
     if (isCorrect) {
+      recordReactionTime();
       const newCombo = combo + 1;
       setCombo(newCombo);
       setMaxCombo(Math.max(maxCombo, newCombo));
@@ -802,6 +780,7 @@ const App: React.FC = () => {
     setTimeout(() => setButtonFeedback(prev => ({ ...prev, sound: false })), 200);
 
     if (isCorrect) {
+      recordReactionTime();
       const newCombo = combo + 1;
       setCombo(newCombo);
       setMaxCombo(Math.max(maxCombo, newCombo));
@@ -824,6 +803,7 @@ const App: React.FC = () => {
     setTimeout(() => setButtonFeedback(prev => ({ ...prev, color: false })), 200);
 
     if (isCorrect) {
+      recordReactionTime();
       const newCombo = combo + 1;
       setCombo(newCombo);
       setMaxCombo(Math.max(maxCombo, newCombo));
@@ -847,12 +827,13 @@ const App: React.FC = () => {
   };
 
   const removeAllProgress = () => {
-    if (window.confirm("Tüm ilerlemeniz, TP puanlarınız ve geçmişiniz kalıcı olarak silinecektir. Emin misiniz?")) {
-      localStorage.clear();
+    if (window.confirm("Tüm ilerlemeniz, Puanlarınız ve geçmişiniz kalıcı olarak silinecektir. Emin misiniz?")) {
+      localStorage.removeItem('cognivault_history');
+      localStorage.removeItem('cognivault_stats');
       setUserStats({ xp: 0, streak: 0, lastPlayed: 0, rank: RANKS[0].name, bestN: 1 });
       setHistory([]);
       setLevel(1);
-      setGameMode('dual');
+      setGameMode('position');
       setGameState('idle');
       triggerHaptic('error');
     }
@@ -874,7 +855,6 @@ const App: React.FC = () => {
       try {
         await navigator.share(shareData);
       } catch (err) {
-        console.error('Share failed', err);
         if (err instanceof Error && err.name !== 'AbortError') {
              try {
                 const clipboardText = `${title}\n${text}${isWeb ? `\n${urlToShare}` : ''}`;
@@ -979,14 +959,32 @@ const App: React.FC = () => {
 
   const missedHeatmap = useMemo(() => {
     const map = Array(9).fill(0);
-    history.slice(0, 20).forEach(h => {
-      if (h.details.position.missed > 0) {
-        for(let i=0; i<h.details.position.missed; i++) map[Math.floor(Math.random() * 9)]++;
+    history.forEach(h => {
+      // Use actual missed positions if available, fall back to approximation if old data
+      if (h.missedPositions && h.missedPositions.length > 0) {
+        h.missedPositions.forEach(pos => {
+          if (pos >= 0 && pos < 9) map[pos]++;
+        });
+      } else if (h.details.position.missed > 0) {
+         // Fallback for old data or if missedPositions is missing
+         // We can't know for sure, so we don't display fake data to avoid confusion, 
+         // or we just skip. Let's skip to be accurate.
       }
     });
     return map;
   }, [history]);
+  
   const maxMiss = Math.max(...missedHeatmap, 1);
+  const avgReactionTime = history.length > 0 
+    ? Math.round(
+        history.reduce((acc, curr) => {
+            const sessionAvg = curr.reactionTimes.length > 0 
+                ? curr.reactionTimes.reduce((a, b) => a + b, 0) / curr.reactionTimes.length 
+                : 0;
+            return acc + sessionAvg;
+        }, 0) / history.filter(h => h.reactionTimes.length > 0).length || 1
+      )
+    : 0;
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden select-none pb-[max(env(safe-area-inset-bottom),16px)] pt-[max(env(safe-area-inset-top),16px)]">
@@ -1083,12 +1081,10 @@ const App: React.FC = () => {
                   {tutorialStep === 'demo_step_1' && "N=1 için karemizin mevcut yerini aklınızda tutun. İlk konum işaretlendi."}
                   {tutorialStep === 'demo_step_2' && "Yeni bir konum işaretlendi. Şimdi bir önceki kareyle karşılaştırma yapacağız."}
                   {tutorialStep === 'demo_step_3' && (
-                    <div className="flex flex-col items-center gap-4">
-                      <span>N=1 modunda, mevcut kare az önceki kareyle aynı yerdeyse KONUM butonuna basın!</span>
-                      {!tutorialSuccess && (
-                        <button onClick={() => handlePositionClick()} className="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm animate-bounce shadow-lg">KONUM BUTONU</button>
-                      )}
-                    </div>
+                     <div className="flex flex-col gap-2">
+                        <p>N=1 modunda, <span className="text-white font-bold">mevcut kare</span> az önceki kareyle <span className="text-white font-bold">aynı yerdeyse</span> KONUM butonuna basın!</p>
+                        <p className="text-indigo-400 text-xs mt-2 font-bold animate-pulse">Eşleşmeyi Yakala!</p>
+                     </div>
                   )}
                   {tutorialStep === 'ready' && "Hazırlık tamamlandı. Kontroller: A (Konum), L (Ses), S (Renk). Başarılar."}
                 </div>
@@ -1098,6 +1094,11 @@ const App: React.FC = () => {
                       <div key={i} className={`rounded-xl transition-all duration-300 aspect-square ${tutorialActiveSquare === i ? 'bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.6)]' : 'bg-slate-800'}`} />
                     ))}
                   </div>
+                )}
+                {tutorialStep === 'demo_step_3' && !tutorialSuccess && (
+                     <div className="mt-6 flex justify-center w-full">
+                        <button onClick={() => handlePositionClick()} className="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm animate-bounce shadow-lg w-full max-w-[200px]">KONUM BUTONU</button>
+                     </div>
                 )}
               </div>
               <button 
@@ -1123,7 +1124,7 @@ const App: React.FC = () => {
              </div>
              <div className="flex items-center gap-3 bg-slate-900/40 backdrop-blur-xl border border-white/5 py-2 px-4 rounded-2xl">
                 <Star className="text-yellow-400 fill-yellow-400" size={18} />
-                <span className="text-white font-black text-sm">{userStats.xp} TP • {currentRank}</span>
+                <span className="text-white font-black text-sm">{userStats.xp} Puan • {currentRank}</span>
              </div>
           </div>
         )}
@@ -1163,7 +1164,7 @@ const App: React.FC = () => {
               <div className="grid grid-cols-2 gap-4 mb-8">
                   <div className="bg-slate-950/50 p-6 rounded-[2rem] border border-white/5 text-center">
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Tepki Süresi</p>
-                    <p className="text-3xl font-black text-white">{Math.round(history.reduce((a,b)=>a+(b.reactionTimes.reduce((x,y)=>x+y,0)/b.reactionTimes.length||0),0)/history.length||0)}<span className="text-xs text-indigo-400 ml-1 uppercase">ms</span></p>
+                    <p className="text-3xl font-black text-white">{avgReactionTime}<span className="text-xs text-indigo-400 ml-1 uppercase">ms</span></p>
                   </div>
                   <div className="bg-slate-950/50 p-6 rounded-[2rem] border border-white/5 text-center">
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">En İyi Zorluk</p>
@@ -1177,7 +1178,8 @@ const App: React.FC = () => {
                  <div className="grid grid-cols-3 gap-3 aspect-square w-48 mx-auto">
                     {missedHeatmap.map((count, i) => (
                       <div key={i} className="rounded-xl border border-white/5 bg-slate-900/40 overflow-hidden relative aspect-square">
-                         <div className="absolute inset-0 bg-rose-500 transition-opacity duration-1000" style={{ opacity: (count / maxMiss) * 0.7 }} />
+                         <div className="absolute inset-0 bg-rose-500 transition-opacity duration-1000" style={{ opacity: Math.min((count / (maxMiss || 1)) * 0.8, 0.9) }} />
+                         {count > 0 && <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white/50">{count}</div>}
                       </div>
                     ))}
                  </div>
@@ -1196,22 +1198,22 @@ const App: React.FC = () => {
             
             {gameState === 'idle' && (
               <div className="space-y-6 mb-8 animate-in fade-in duration-500 w-full">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 items-stretch">
+                  <div className="flex flex-col space-y-2 h-full">
                     <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-2">
                       <Target size={14} className="text-indigo-500" /> Zorluk Derecesi (N)
                     </label>
-                    <div className="flex p-1.5 bg-slate-800/40 rounded-2xl border border-white/5">
+                    <div className="flex flex-1 p-1.5 bg-slate-800/40 rounded-2xl border border-white/5">
                       {[1, 2, 3, 4, 5].map((l) => (
                         <button key={l} onClick={() => { setLevel(l); triggerHaptic('light'); }} className={`flex-1 py-2 rounded-xl font-black text-sm transition-all active:scale-90 ${level === l ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:text-white'}`}>{l}</button>
                       ))}
                     </div>
                   </div>
-                  <div className="space-y-2">
+                  <div className="flex flex-col space-y-2 h-full">
                     <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-2">
                       <Palette size={14} className="text-purple-500" /> Oyun Modu
                     </label>
-                    <div className="flex p-1.5 bg-slate-800/40 rounded-2xl border border-white/5">
+                    <div className="flex flex-1 p-1.5 bg-slate-800/40 rounded-2xl border border-white/5">
                       {(['position', 'dual', 'triple'] as GameMode[]).map((m) => (
                         <button key={m} onClick={() => { setGameMode(m); triggerHaptic('light'); }} className={`flex-1 min-w-0 py-2 rounded-xl font-black text-[10px] transition-all active:scale-90 ${gameMode === m ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400'}`}>
                           {m === 'position' ? 'Konum' : m === 'dual' ? 'İkili' : 'Üçlü'}
@@ -1220,12 +1222,12 @@ const App: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 items-stretch">
+                  <div className="flex flex-col space-y-2 h-full">
                     <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-2">
                       <Gauge size={14} className="text-yellow-500" /> Oyun Ritmi
                     </label>
-                    <div className="flex p-1.5 bg-slate-800/40 rounded-2xl border border-white/5">
+                    <div className="flex flex-1 p-1.5 bg-slate-800/40 rounded-2xl border border-white/5">
                       {(['slow', 'normal', 'fast'] as GameSpeed[]).map((s) => (
                         <button key={s} onClick={() => { setSpeed(s); triggerHaptic('light'); }} className={`flex-1 py-2 rounded-xl font-black text-[10px] transition-all active:scale-90 ${speed === s ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400'}`}>
                           {s === 'slow' ? 'Yavaş' : s === 'normal' ? 'Normal' : 'Hızlı'}
@@ -1233,11 +1235,11 @@ const App: React.FC = () => {
                       ))}
                     </div>
                   </div>
-                  <div className="space-y-2">
+                  <div className="flex flex-col space-y-2 h-full">
                     <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-2">
                       <TrendingUp size={14} className="text-emerald-500" /> Eğitim Modu
                     </label>
-                    <div className="flex p-1.5 bg-slate-800/40 rounded-2xl border border-white/5">
+                    <div className="flex flex-1 p-1.5 bg-slate-800/40 rounded-2xl border border-white/5">
                       <button onClick={() => { setIsPractice(!isPractice); setIsMarathon(false); triggerHaptic('light'); }} className={`flex-1 py-2 rounded-xl font-black text-[10px] transition-all active:scale-90 ${isPractice ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-400'}`}>Alıştırma</button>
                       <button onClick={() => { setIsMarathon(!isMarathon); setIsPractice(false); triggerHaptic('light'); }} className={`flex-1 py-2 rounded-xl font-black text-[10px] transition-all active:scale-90 ${isMarathon ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20' : 'text-slate-400'}`}>Maraton</button>
                     </div>
@@ -1256,7 +1258,7 @@ const App: React.FC = () => {
 
             {(gameState === 'idle' || gameState === 'playing') && (
               <div className={`relative flex justify-center transition-all duration-700 ${isZenMode && isPlaying ? 'scale-125 mb-16' : 'mb-8'} w-full`}>
-                 <div className={`grid grid-cols-3 gap-4 aspect-square w-full max-w-[320px] p-5 bg-slate-950/40 rounded-[3rem] border-2 transition-all duration-500 ${isPlaying ? 'border-indigo-500/30 ring-8 ring-indigo-500/5 shadow-[0_0_30px_rgba(99,102,241,0.1)]' : 'border-white/5 shadow-2xl'}`}>
+                 <div className={`grid grid-cols-3 gap-4 aspect-square w-full max-w-[360px] p-5 bg-slate-950/40 rounded-[3rem] border-2 transition-all duration-500 ${isPlaying ? 'border-indigo-500/30 ring-8 ring-indigo-500/5 shadow-[0_0_30px_rgba(99,102,241,0.1)]' : 'border-white/5 shadow-2xl'}`}>
                     {[...Array(9)].map((_, i) => {
                       const isActive = gameState === 'idle' ? i === demoActive : activeStimulus?.pos === i;
                       const activeColor = activeStimulus?.col || '#6366f1';
@@ -1296,7 +1298,10 @@ const App: React.FC = () => {
                     >
                       <div className="flex flex-col items-center gap-2">
                         <Square size={isZenMode && isPlaying ? 48 : 36} />
-                        <span className={`${isZenMode && isPlaying ? 'text-[13px]' : 'text-[11px]'} uppercase tracking-[0.2em] font-black`}>Konum</span>
+                        <span className={`${isZenMode && isPlaying ? 'text-[13px]' : 'text-[11px]'} uppercase tracking-[0.2em] font-black`}>
+                            Konum
+                            <span className="hidden lg:inline-block ml-1 opacity-40 font-mono text-[9px]">(A)</span>
+                        </span>
                       </div>
                     </button>
                     {(gameMode === 'dual' || gameMode === 'triple') && (
@@ -1307,7 +1312,10 @@ const App: React.FC = () => {
                       >
                         <div className="flex flex-col items-center gap-2">
                           <Volume2 size={isZenMode && isPlaying ? 48 : 36} />
-                          <span className={`${isZenMode && isPlaying ? 'text-[13px]' : 'text-[11px]'} uppercase tracking-[0.2em] font-black`}>Ses</span>
+                          <span className={`${isZenMode && isPlaying ? 'text-[13px]' : 'text-[11px]'} uppercase tracking-[0.2em] font-black`}>
+                            Ses
+                            <span className="hidden lg:inline-block ml-1 opacity-40 font-mono text-[9px]">(L)</span>
+                          </span>
                         </div>
                       </button>
                     )}
@@ -1319,7 +1327,10 @@ const App: React.FC = () => {
                       >
                         <div className="flex flex-col items-center gap-2">
                           <Palette size={isZenMode && isPlaying ? 48 : 36} />
-                          <span className={`${isZenMode && isPlaying ? 'text-[13px]' : 'text-[11px]'} uppercase tracking-[0.2em] font-black`}>Renk</span>
+                          <span className={`${isZenMode && isPlaying ? 'text-[13px]' : 'text-[11px]'} uppercase tracking-[0.2em] font-black`}>
+                            Renk
+                            <span className="hidden lg:inline-block ml-1 opacity-40 font-mono text-[9px]">(S)</span>
+                          </span>
                         </div>
                       </button>
                     )}
