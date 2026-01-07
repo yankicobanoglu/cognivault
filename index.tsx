@@ -194,8 +194,8 @@ const TRANSLATIONS = {
     attentionMap: "Dikkat Eksikliği Haritası",
     resetData: "TÜM VERİLERİ SIFIRLA",
     resetConfirm: "Tüm ilerlemeniz, puanlarınız ve geçmişiniz kalıcı olarak silinecektir. Emin misiniz?",
-    shareTitle: "Canım Anam - Zihin Egzersizi",
-    sharePrompt: "🧠 Hafızanı ve odaklanmanı test et! \"Canım Anam\" oyununda kaçıncı seviyeye çıkabilirsin? Hemen oyna:",
+    shareTitle: "Dual N-Backer - Brain Training",
+    sharePrompt: "🧠 Test your memory and focus! How high can you go in \"Dual N-Backer\"? Play now:",
     slow: "Yavaş",
     normal: "Normal",
     fast: "Hızlı",
@@ -223,7 +223,7 @@ const TRANSLATIONS = {
     start: "Başlat",
     gameParams: "Oyun Parametreleri",
     standard: "Standart",
-    standardDesc: "20-30 adımlık klasik seans.",
+    standardDesc: "Classic 20-30 step session.",
     playAgain: "Tekrar Oyna"
   },
   en: {
