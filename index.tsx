@@ -1144,6 +1144,12 @@ const App: React.FC = () => {
                 </div>
               </div>
               <div className="flex gap-2">
+                <button 
+                    onClick={() => handleShare('Canım Anam - Zihin Egzersizi', '🧠 Hafızanı ve odaklanmanı test et! "Canım Anam" oyununda kaçıncı seviyeye çıkabilirsin? Hemen oyna:')} 
+                    className="p-3.5 bg-slate-800/50 rounded-2xl hover:bg-emerald-500/20 transition-all border border-white/5 active:scale-90 group"
+                >
+                    <Share2 size={24} className="text-emerald-400 group-hover:scale-110 transition-transform" />
+                </button>
                 <button onClick={() => setGameState('analytics')} className="p-3.5 bg-slate-800/50 rounded-2xl hover:bg-indigo-500/20 transition-all border border-white/5 active:scale-90 group">
                   <BarChart3 size={24} className="text-indigo-400 group-hover:scale-110 transition-transform" />
                 </button>
