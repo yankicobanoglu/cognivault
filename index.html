@@ -8,6 +8,10 @@
     <meta name="theme-color" content="#020617">
     <title>Dual N-Backer</title>
     
+    <!-- PWA Configuration -->
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3665/3665923.png">
+    
     <!-- Styles -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -70,8 +74,9 @@
     {
       "imports": {
         "react": "https://esm.sh/react@18.2.0",
-        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-        "lucide-react": "https://esm.sh/lucide-react@0.292.0"
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?deps=react@18.2.0",
+        "lucide-react": "https://esm.sh/lucide-react@0.292.0?deps=react@18.2.0",
+        "@vercel/analytics/react": "https://esm.sh/@vercel/analytics/react?deps=react@18.2.0"
       }
     }
     </script>
@@ -89,6 +94,7 @@
     <script type="text/babel" data-type="module">
         import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
         import { createRoot } from 'react-dom/client';
+        import { Analytics } from '@vercel/analytics/react';
         import { Volume2, Square, Play, RotateCcw, Zap, Info, TrendingUp, Trophy, Brain, Palette, Gauge, Target, HelpCircle, XCircle, ChevronRight, CheckCircle2, ArrowLeft, BarChart3, Settings, EyeOff, Calendar, Globe, Flame, Star, ZapOff, Trash2, Swords, Share2 } from 'lucide-react';
 
         // --- CONSTANTS & DATA ---
@@ -1317,84 +1323,6 @@
                 )}
 
                 {(!isZenMode || !isPlaying) && gameState !== 'finished' && gameState !== 'analytics' && (
-                  <div className="bg-slate-900/30 backdrop-blur-3xl rounded-[2.5rem] p-6 border border-white/10 shadow-2xl transition-all duration-500 animate-in fade-in w-full">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="p-4 bg-indigo-500/20 rounded-[1.5rem] shadow-lg ring-1 ring-white/10">
-                          <Brain className="text-indigo-400" size={36} />
-                        </div>
-                        <div>
-                          <h1 className="text-3xl font-black text-white tracking-tight">{t.title}</h1>
-                          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest opacity-60">{t.subtitle}</p>
-                        </div>
-                      </div>
-                      <div className="bg-slate-800/50 p-1.5 rounded-2xl border border-white/5 flex items-center gap-1">
-                        <button onClick={() => setGameState('analytics')} className="p-2.5 rounded-xl hover:bg-indigo-500/20 transition-all active:scale-90 text-indigo-400">
-                          <BarChart3 size={20} />
-                        </button>
-                        <button onClick={startTutorial} className="p-2.5 rounded-xl hover:bg-slate-700 transition-all active:scale-90 text-slate-400">
-                          <HelpCircle size={20} />
-                        </button>
-                        <button 
-                            onClick={() => handleShare(t.shareTitle, t.sharePrompt)} 
-                            className="p-2.5 rounded-xl hover:bg-emerald-500/20 transition-all active:scale-90 text-emerald-400"
-                        >
-                            <Share2 size={20} />
-                        </button>
-                        <button 
-                          onClick={toggleLanguage} 
-                          className="p-2.5 rounded-xl hover:bg-slate-700 transition-all active:scale-90 ml-1 flex items-center justify-center"
-                        >
-                          <div className="w-5 h-5 rounded-full overflow-hidden relative shadow-sm">
-                            {language === 'tr' ? <FlagTR /> : <FlagUK />}
-                          </div>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {gameState === 'analytics' && (
-                  <div className="bg-slate-900/40 backdrop-blur-3xl rounded-[3rem] p-8 border border-white/10 shadow-2xl animate-in fade-in zoom-in duration-500 w-full">
-                     <div className="flex items-center justify-between mb-8">
-                        <h2 className="text-2xl font-black text-white">{t.neuralMetrics}</h2>
-                        <button onClick={() => setGameState('idle')} className="p-3 bg-slate-800/50 rounded-2xl text-slate-400 hover:text-white transition-all active:scale-90 border border-white/5">
-                          <ArrowLeft size={20} />
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 mb-8">
-                          <div className="bg-slate-950/50 p-6 rounded-[2rem] border border-white/5 text-center">
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{t.reactionTime}</p>
-                            <p className="text-3xl font-black text-white">{avgReactionTimeSec}<span className="text-xs text-indigo-400 ml-1 uppercase">sn</span></p>
-                          </div>
-                          <div className="bg-slate-950/50 p-6 rounded-[2rem] border border-white/5 text-center">
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{t.bestN}</p>
-                            <p className="text-3xl font-black text-white">N-{userStats.bestN}</p>
-                          </div>
-                      </div>
-                      <div className="bg-slate-950/40 p-8 rounded-[2.5rem] border border-white/5 text-center mb-6">
-                         <h3 className="text-xs font-black text-indigo-400 uppercase tracking-[0.2em] mb-6 flex items-center justify-center gap-2">
-                            <Zap size={16} /> {t.attentionMap}
-                         </h3>
-                         <div className="grid grid-cols-3 gap-3 aspect-square w-48 mx-auto">
-                            {missedHeatmap.map((count, i) => (
-                              <div key={i} className="rounded-xl border border-white/5 bg-slate-900/40 overflow-hidden relative aspect-square">
-                                 <div className="absolute inset-0 bg-rose-500 transition-opacity duration-1000" style={{ opacity: Math.min((count / (maxMiss || 1)) * 0.8, 0.9) }} />
-                                 {count > 0 && <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white/50">{count}</div>}
-                              </div>
-                            ))}
-                         </div>
-                      </div>
-                      <button 
-                        onClick={removeAllProgress}
-                        className="w-full py-4 rounded-2xl bg-rose-600/10 border border-rose-500/20 text-rose-500 font-black text-xs flex items-center justify-center gap-2 transition-all active:scale-95 hover:bg-rose-600 hover:text-white"
-                      >
-                        <Trash2 size={16} /> {t.resetData}
-                      </button>
-                  </div>
-                )}
-
-                {gameState !== 'analytics' && gameState !== 'finished' && (
                   <div className={`transition-all duration-700 w-full flex flex-col items-center ${isZenMode && isPlaying ? 'bg-transparent' : 'bg-slate-900/30 backdrop-blur-3xl border border-white/10 rounded-[2rem] sm:rounded-[3rem] p-5 sm:p-8 shadow-2xl'}`}>
                     
                     {gameState === 'idle' && (
@@ -1587,72 +1515,8 @@
                      )}
                   </div>
                 )}
-
-                {(!isZenMode || !isPlaying) && gameState === 'idle' && (
-                  <div className="bg-slate-900/20 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white/5 shadow-xl animate-in slide-in-from-bottom-4 duration-700 delay-200 w-full mt-4">
-                     <h3 className="text-white text-xs md:text-sm font-black uppercase tracking-widest mb-6 flex items-center gap-2 opacity-70"><div className="p-0.5"><Info size={14} className="text-indigo-400" /></div> {t.gameParams}</h3>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                       <div className="space-y-3">
-                         <div className="flex items-start gap-3">
-                            <div className="shrink-0 p-1 bg-slate-800 rounded-lg"><Brain size={12} className="text-indigo-500" /></div>
-                            <div>
-                              <p className="text-[10px] md:text-xs font-black text-white uppercase tracking-wider mb-0.5">{t.gameMode}</p>
-                              <p className="text-[10px] md:text-xs text-slate-400 leading-snug">{t.gameModeDesc}</p>
-                            </div>
-                         </div>
-                         <div className="flex items-start gap-3">
-                            <div className="shrink-0 p-1 bg-slate-800 rounded-lg"><Target size={12} className="text-blue-500" /></div>
-                            <div>
-                              <p className="text-[10px] md:text-xs font-black text-white uppercase tracking-wider mb-0.5">{t.difficulty}</p>
-                              <p className="text-[10px] md:text-xs text-slate-400 leading-snug">{t.difficultyDesc}</p>
-                            </div>
-                         </div>
-                         <div className="flex items-start gap-3">
-                            <div className="shrink-0 p-1 bg-slate-800 rounded-lg"><Calendar size={12} className="text-emerald-500" /></div>
-                            <div>
-                              <p className="text-[10px] md:text-xs font-black text-white uppercase tracking-wider mb-0.5">{t.dailyRace}</p>
-                              <p className="text-[10px] md:text-xs text-slate-400 leading-snug">{t.dailyRaceDesc}</p>
-                            </div>
-                         </div>
-                         <div className="flex items-start gap-3">
-                            <div className="shrink-0 p-1 bg-slate-800 rounded-lg"><Swords size={12} className="text-orange-500" /></div>
-                            <div>
-                              <p className="text-[10px] md:text-xs font-black text-white uppercase tracking-wider mb-0.5">{t.challenge}</p>
-                              <p className="text-[10px] md:text-xs text-slate-400 leading-snug">{t.challengeDesc}</p>
-                            </div>
-                         </div>
-                       </div>
-                       
-                       <div className="space-y-3">
-                         <div className="flex items-start gap-3">
-                            <div className="shrink-0 p-1 bg-slate-800 rounded-lg"><TrendingUp size={12} className="text-emerald-500" /></div>
-                            <div>
-                              <p className="text-[10px] md:text-xs font-black text-white uppercase tracking-wider mb-0.5">{t.trainingMode}</p>
-                              <div className="text-[10px] md:text-xs text-slate-400 leading-snug flex flex-col gap-1 mt-1">
-                                  <div><span className="text-white font-bold">{t.standard}:</span> {t.standardDesc}</div>
-                                  <div><span className="text-white font-bold">{t.practice}:</span> {t.practiceDesc}</div>
-                              </div>
-                            </div>
-                         </div>
-                         <div className="flex items-start gap-3">
-                            <div className="shrink-0 p-1 bg-slate-800 rounded-lg"><ZapOff size={12} className="text-rose-500" /></div>
-                            <div>
-                              <p className="text-[10px] md:text-xs font-black text-white uppercase tracking-wider mb-0.5">{t.marathon}</p>
-                              <p className="text-[10px] md:text-xs text-slate-400 leading-snug">{t.marathonDesc}</p>
-                            </div>
-                         </div>
-                         <div className="flex items-start gap-3">
-                            <div className="shrink-0 p-1 bg-slate-800 rounded-lg"><EyeOff size={12} className="text-slate-400" /></div>
-                            <div>
-                              <p className="text-[10px] md:text-xs font-black text-white uppercase tracking-wider mb-0.5">{t.zenMode}</p>
-                              <p className="text-[10px] md:text-xs text-slate-400 leading-snug">{t.zenModeDesc}</p>
-                            </div>
-                         </div>
-                       </div>
-                     </div>
-                  </div>
-                )}
               </div>
+              <Analytics />
             </div>
           );
         };
@@ -1662,6 +1526,15 @@
         if (container) {
           const root = createRoot(container);
           root.render(<App />);
+        }
+
+        // --- SERVICE WORKER REGISTRATION ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => console.log('SW registered'))
+                    .catch(err => console.log('SW registration failed: ', err));
+            });
         }
     </script>
 </body>
