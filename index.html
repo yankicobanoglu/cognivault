@@ -197,10 +197,10 @@
             tutorialStep2: "Yeni bir konum işaretlendi. Şimdi bir önceki kareyle karşılaştırma yapacağız.",
             tutorialStep3Match: "N=1 modunda, mevcut kare az önceki kareyle aynı yerdeyse KONUM butonuna basın!",
             tutorialBtn: "KONUM BUTONU", continue: "Devam Et", start: "Başlat",
-            standard: "Standart", standardDesc: "20-30 adımlık klasik seans.", playAgain: "Tekrar Oyna",
-            terms: "Kullanım Koşulları", privacy: "Gizlilik Politikası", rights: "Tüm hakları saklıdır.", close: "Kapat",
-            privacyContent: "Bu uygulama kişisel verilerinizi toplamaz veya harici sunucularda saklamaz. Tüm oyun ilerlemesi, istatistikler ve ayarlar tarayıcınızın yerel depolama alanında (LocalStorage) tutulur. Verilerinizi 'Ayarlar > Verileri Sıfırla' seçeneği ile dilediğiniz zaman silebilirsiniz.",
-            termsContent: "Bu uygulama 'olduğu gibi' sunulmaktadır. Zihinsel egzersiz amaçlıdır ve tıbbi bir tedavi yerine geçmez. Geliştirici, uygulamanın kullanımından doğabilecek sonuçlardan sorumlu değildir.",
+            standard: "Standard", standardDesc: "Classic 20-30 step session.", playAgain: "Play Again",
+            terms: "Terms of Service", privacy: "Privacy Policy", rights: "All rights reserved.", close: "Close",
+            privacyContent: "This application does not collect or store personal data on external servers. All game progress, statistics, and settings are stored locally in your browser's storage (LocalStorage). You can delete your data at any time via 'Settings > Reset Data'.",
+            termsContent: "This application is provided 'as is'. It is intended for mental exercise purposes and does not substitute medical treatment. The developer is not liable for any outcomes resulting from the use of this application.",
             vibedWith: "Vibed with Gemini",
             analytics: "Analizler", analyticsDesc: "Performans ve gelişim grafikleri.", noData: "Henüz veri yok.",
             brainTraining: "Zihin Eğitimi"
@@ -254,8 +254,8 @@
             privacyContent: "This application does not collect or store personal data on external servers. All game progress, statistics, and settings are stored locally in your browser's storage (LocalStorage). You can delete your data at any time via 'Settings > Reset Data'.",
             termsContent: "This application is provided 'as is'. It is intended for mental exercise purposes and does not substitute medical treatment. The developer is not liable for any outcomes resulting from the use of this application.",
             vibedWith: "Vibed with Gemini",
-            analytics: "Analytics", analyticsDesc: "Performance and growth charts.", noData: "No data yet.",
-            brainTraining: "Brain Training"
+            analytics: "Analizler", analyticsDesc: "Performance and growth charts.", noData: "Henüz veri yok.",
+            brainTraining: "Zihin Eğitimi"
           }
         };
 
@@ -613,7 +613,7 @@
           const [demoButtonPressed, setDemoButtonPressed] = useState(false);
 
           const voiceRef = useRef(null);
-          const t = TRANSLATIONS[language];
+          const t = TRANSLATIONS[language] || TRANSLATIONS['en'];
           const currentLetters = language === 'tr' ? LETTERS_TR : LETTERS_EN;
 
           const triggerHaptic = (type = 'light') => {
@@ -1491,7 +1491,7 @@
                     )}
 
                     {/* STANDARD CONTROLS - Hide in Zen Mode Playing */}
-                    <div className={`transition-all duration-500 w-full ${isZenMode && isPlaying ? 'hidden' : 'max-w-[420px] flex flex-col items-center px-4'}`}>
+                    <div className={`transition-all duration-500 w-full ${isZenMode && isPlaying ? 'hidden' : 'max-w-[420px] md:max-w-[500px] flex flex-col items-center'}`}>
                       {gameState === 'idle' && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full">
                           <button onClick={() => startGame(false)} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-6 rounded-[2rem] font-black text-2xl md:text-3xl flex items-center justify-center gap-4 transition-all shadow-xl shadow-indigo-600/30 active:scale-95 group">
@@ -1573,78 +1573,83 @@
 
                         {/* GAME PARAMETERS INFO GRID (NEW) */}
                         {gameState === 'idle' && (
-                          <div className="mt-12 w-full max-w-2xl bg-slate-900/40 rounded-[2.5rem] p-8 border border-white/5 animate-in fade-in duration-700">
-                              <h3 className="flex items-center gap-3 text-sm md:text-base font-black text-slate-300 uppercase tracking-widest mb-8">
-                                  <Info size={18} className="text-indigo-500" /> {t.gameParamsTitle}
-                              </h3>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-8">
-                                  <div className="flex gap-4 items-start">
-                                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-white/5">
-                                          <Palette size={18} className="text-indigo-400" />
+                          <div className="mt-12 w-full max-w-2xl animate-in fade-in duration-700">
+                              <div className="flex items-center gap-4 mb-6 px-4">
+                                  <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent flex-1" />
+                                  <h3 className="flex items-center gap-2 text-sm font-black text-slate-400 uppercase tracking-[0.2em]">
+                                      <Info size={16} className="text-indigo-500" /> {t.gameParamsTitle}
+                                  </h3>
+                                  <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent flex-1" />
+                              </div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <div className="bg-slate-900/60 p-5 rounded-3xl border border-white/5 flex gap-4 items-start hover:border-white/10 transition-colors">
+                                      <div className="w-12 h-12 rounded-2xl bg-slate-800/50 flex items-center justify-center shrink-0 border border-white/5 shadow-inner group">
+                                          <Palette size={20} className="text-indigo-400 group-hover:scale-110 transition-transform" />
                                       </div>
                                       <div>
-                                          <h4 className="font-black text-sm text-white mb-1 uppercase">{t.gameMode}</h4>
-                                          <p className="text-xs text-slate-400 leading-relaxed">{t.gameModeDesc}</p>
+                                          <h4 className="font-black text-sm text-white mb-1 uppercase tracking-wide">{t.gameMode}</h4>
+                                          <p className="text-xs md:text-sm text-slate-400 leading-relaxed">{t.gameModeDesc}</p>
                                       </div>
                                   </div>
 
-                                  <div className="flex gap-4 items-start">
-                                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-white/5">
-                                          <TrendingUp size={18} className="text-emerald-400" />
+                                  <div className="bg-slate-900/60 p-5 rounded-3xl border border-white/5 flex gap-4 items-start hover:border-white/10 transition-colors">
+                                      <div className="w-12 h-12 rounded-2xl bg-slate-800/50 flex items-center justify-center shrink-0 border border-white/5 shadow-inner group">
+                                          <TrendingUp size={20} className="text-emerald-400 group-hover:scale-110 transition-transform" />
                                       </div>
                                       <div>
-                                          <h4 className="font-black text-sm text-white mb-1 uppercase">{t.practice}</h4>
-                                          <p className="text-xs text-slate-400 leading-relaxed">{t.practiceDesc}</p>
+                                          <h4 className="font-black text-sm text-white mb-1 uppercase tracking-wide">{t.practice}</h4>
+                                          <p className="text-xs md:text-sm text-slate-400 leading-relaxed">{t.practiceDesc}</p>
                                       </div>
                                   </div>
 
-                                  <div className="flex gap-4 items-start">
-                                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-white/5">
-                                          <Target size={18} className="text-blue-400" />
+                                  <div className="bg-slate-900/60 p-5 rounded-3xl border border-white/5 flex gap-4 items-start hover:border-white/10 transition-colors">
+                                      <div className="w-12 h-12 rounded-2xl bg-slate-800/50 flex items-center justify-center shrink-0 border border-white/5 shadow-inner group">
+                                          <Target size={20} className="text-blue-400 group-hover:scale-110 transition-transform" />
                                       </div>
                                       <div>
-                                          <h4 className="font-black text-sm text-white mb-1 uppercase">{t.difficulty}</h4>
-                                          <p className="text-xs text-slate-400 leading-relaxed">{t.difficultyDesc}</p>
+                                          <h4 className="font-black text-sm text-white mb-1 uppercase tracking-wide">{t.difficulty}</h4>
+                                          <p className="text-xs md:text-sm text-slate-400 leading-relaxed">{t.difficultyDesc}</p>
                                       </div>
                                   </div>
 
-                                  <div className="flex gap-4 items-start">
-                                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-white/5">
-                                          <Zap size={18} className="text-rose-400" />
+                                  <div className="bg-slate-900/60 p-5 rounded-3xl border border-white/5 flex gap-4 items-start hover:border-white/10 transition-colors">
+                                      <div className="w-12 h-12 rounded-2xl bg-slate-800/50 flex items-center justify-center shrink-0 border border-white/5 shadow-inner group">
+                                          <Zap size={20} className="text-rose-400 group-hover:scale-110 transition-transform" />
                                       </div>
                                       <div>
-                                          <h4 className="font-black text-sm text-white mb-1 uppercase">{t.marathon}</h4>
-                                          <p className="text-xs text-slate-400 leading-relaxed">{t.marathonDesc}</p>
+                                          <h4 className="font-black text-sm text-white mb-1 uppercase tracking-wide">{t.marathon}</h4>
+                                          <p className="text-xs md:text-sm text-slate-400 leading-relaxed">{t.marathonDesc}</p>
                                       </div>
                                   </div>
 
-                                  <div className="flex gap-4 items-start">
-                                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-white/5">
-                                          <Calendar size={18} className="text-emerald-400" />
+                                  <div className="bg-slate-900/60 p-5 rounded-3xl border border-white/5 flex gap-4 items-start hover:border-white/10 transition-colors">
+                                      <div className="w-12 h-12 rounded-2xl bg-slate-800/50 flex items-center justify-center shrink-0 border border-white/5 shadow-inner group">
+                                          <Calendar size={20} className="text-emerald-400 group-hover:scale-110 transition-transform" />
                                       </div>
                                       <div>
-                                          <h4 className="font-black text-sm text-white mb-1 uppercase">{t.dailyRace}</h4>
-                                          <p className="text-xs text-slate-400 leading-relaxed">{t.dailyRaceDesc}</p>
+                                          <h4 className="font-black text-sm text-white mb-1 uppercase tracking-wide">{t.dailyRace}</h4>
+                                          <p className="text-xs md:text-sm text-slate-400 leading-relaxed">{t.dailyRaceDesc}</p>
                                       </div>
                                   </div>
 
-                                  <div className="flex gap-4 items-start">
-                                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-white/5">
-                                          <EyeOff size={18} className="text-slate-400" />
+                                  <div className="bg-slate-900/60 p-5 rounded-3xl border border-white/5 flex gap-4 items-start hover:border-white/10 transition-colors">
+                                      <div className="w-12 h-12 rounded-2xl bg-slate-800/50 flex items-center justify-center shrink-0 border border-white/5 shadow-inner group">
+                                          <EyeOff size={20} className="text-slate-400 group-hover:scale-110 transition-transform" />
                                       </div>
                                       <div>
-                                          <h4 className="font-black text-sm text-white mb-1 uppercase">{t.zenMode}</h4>
-                                          <p className="text-xs text-slate-400 leading-relaxed">{t.zenModeDesc}</p>
+                                          <h4 className="font-black text-sm text-white mb-1 uppercase tracking-wide">{t.zenMode}</h4>
+                                          <p className="text-xs md:text-sm text-slate-400 leading-relaxed">{t.zenModeDesc}</p>
                                       </div>
                                   </div>
 
-                                  <div className="flex gap-4 items-start">
-                                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-white/5">
-                                          <Swords size={18} className="text-orange-400" />
+                                  <div className="bg-slate-900/60 p-5 rounded-3xl border border-white/5 flex gap-4 items-start hover:border-white/10 transition-colors md:col-span-2">
+                                      <div className="w-12 h-12 rounded-2xl bg-slate-800/50 flex items-center justify-center shrink-0 border border-white/5 shadow-inner group">
+                                          <Swords size={20} className="text-orange-400 group-hover:scale-110 transition-transform" />
                                       </div>
                                       <div>
-                                          <h4 className="font-black text-sm text-white mb-1 uppercase">{t.challenge}</h4>
-                                          <p className="text-xs text-slate-400 leading-relaxed">{t.challengeDesc}</p>
+                                          <h4 className="font-black text-sm text-white mb-1 uppercase tracking-wide">{t.challenge}</h4>
+                                          <p className="text-xs md:text-sm text-slate-400 leading-relaxed">{t.challengeDesc}</p>
                                       </div>
                                   </div>
                               </div>
