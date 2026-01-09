@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'cognivault-v11';
+const CACHE_NAME = 'cognivault-v12';
 const ASSETS = [
   './',
   './index.html',

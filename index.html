@@ -203,7 +203,12 @@
             termsContent: "This application is provided 'as is'. It is intended for mental exercise purposes and does not substitute medical treatment. The developer is not liable for any outcomes resulting from the use of this application.",
             vibedWith: "Vibed with Gemini",
             analytics: "Analizler", analyticsDesc: "Performans ve gelişim grafikleri.", noData: "Henüz veri yok.",
-            brainTraining: "Zihin Eğitimi"
+            brainTraining: "Zihin Eğitimi",
+            challengeStartTitle: "Meydan Okuma Modu",
+            challengeStartText: "Önce sen oyna ve skoru belirle! Oyun bitince arkadaşlarına gönderebileceğin özel bir bağlantı oluşturulacak.",
+            startChallenge: "Başla ve Skoru Belirle",
+            shareChallenge: "Meydan Okumayı Paylaş",
+            challengeShareMsg: "Canım Anam oyununda N-{level} seviyesinde %{score} puan yaptım. Beni geçebilir misin?"
           },
           en: {
             title: "Dual N-Backer", subtitle: "Memory Game", streak: "Day Streak", score: "XP",
@@ -255,7 +260,12 @@
             termsContent: "This application is provided 'as is'. It is intended for mental exercise purposes and does not substitute medical treatment. The developer is not liable for any outcomes resulting from the use of this application.",
             vibedWith: "Vibed with Gemini",
             analytics: "Analytics", analyticsDesc: "Performance and growth charts.", noData: "No data yet.",
-            brainTraining: "Memory Training"
+            brainTraining: "Memory Training",
+            challengeStartTitle: "Challenge Mode",
+            challengeStartText: "You play first to set the score! After the game, you'll get a special link to challenge your friends.",
+            startChallenge: "Start & Set Score",
+            shareChallenge: "Share Challenge",
+            challengeShareMsg: "I scored %{score} in Dual N-Backer at N-{level}. Can you beat me?"
           }
         };
 
@@ -569,6 +579,7 @@
           const [challengeSeed, setChallengeSeed] = useState(null);
           const [isChallengeCreator, setIsChallengeCreator] = useState(false);
           const [incomingChallenge, setIncomingChallenge] = useState(null);
+          const [showChallengeIntro, setShowChallengeIntro] = useState(false);
 
           // Legal State
           const [legalModal, setLegalModal] = useState(null);
@@ -1073,7 +1084,7 @@
             const fullUrl = `${baseUrl}?${params.toString()}`;
             handleShare(
                 t.challenge, 
-                t.shareMsg.replace('%{score}', scoreDetails.overall.percentage.toString()).replace('%{level}', level.toString()),
+                t.challengeShareMsg.replace('%{score}', scoreDetails.overall.percentage.toString()).replace('%{level}', level.toString()),
                 fullUrl
             );
           };
@@ -1174,7 +1185,7 @@
               <NeuralMesh combo={isPlaying ? combo : 0} />
               
               {/* RESTORED TOP HEADER */}
-              {gameState === 'idle' && !showIntro && !tutorialStep && (
+              {gameState === 'idle' && !showIntro && !tutorialStep && !showChallengeIntro && (
                   <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-50 animate-in fade-in slide-in-from-top-4 duration-700">
                       <div className="flex gap-3">
                           <button onClick={startTutorial} className="p-3 bg-slate-800/50 hover:bg-indigo-600 backdrop-blur-md rounded-2xl text-slate-400 hover:text-white transition-all ring-1 ring-white/5 active:scale-95 shadow-lg">
@@ -1196,7 +1207,7 @@
               )}
 
               {/* Incoming Challenge Modal */}
-              {incomingChallenge && gameState === 'idle' && !tutorialStep && !showIntro && (
+              {incomingChallenge && gameState === 'idle' && !tutorialStep && !showIntro && !showChallengeIntro && (
                 <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in zoom-in duration-300">
                   <div className="bg-slate-900/80 border border-indigo-500/30 p-8 rounded-[3rem] shadow-2xl max-w-md w-full relative">
                     <div className="flex flex-col items-center">
@@ -1231,6 +1242,44 @@
                           className="mt-4 text-slate-500 text-xs font-bold hover:text-white"
                         >
                           {t.decline}
+                        </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Create Challenge Modal */}
+              {showChallengeIntro && gameState === 'idle' && !showIntro && (
+                <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in zoom-in duration-300">
+                  <div className="bg-slate-900/80 border border-orange-500/30 p-8 rounded-[3rem] shadow-2xl max-w-md w-full relative">
+                    <button onClick={() => setShowChallengeIntro(false)} className="absolute top-8 right-8 text-slate-500 hover:text-white transition-colors">
+                      <XCircle size={24} />
+                    </button>
+                    <div className="flex flex-col items-center">
+                        <div className="p-5 bg-orange-500/20 rounded-[2rem] mb-6 shadow-inner ring-1 ring-white/10">
+                          <Swords className="text-orange-400" size={48} />
+                        </div>
+                        <h2 className="text-3xl font-black text-white leading-tight mb-4 text-center">{t.challengeStartTitle}</h2>
+                        <div className="text-slate-400 text-sm mb-8 text-center leading-relaxed px-2">
+                           {t.challengeStartText}
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3 w-full mb-6 opacity-70">
+                            <div className="bg-slate-950/50 p-3 rounded-xl border border-white/5 text-center">
+                                <div className="text-[10px] text-slate-500 font-bold uppercase">{t.level}</div>
+                                <div className="text-xl font-black text-white">N-{level}</div>
+                            </div>
+                             <div className="bg-slate-950/50 p-3 rounded-xl border border-white/5 text-center">
+                                <div className="text-[10px] text-slate-500 font-bold uppercase">{t.mode}</div>
+                                <div className="text-xl font-black text-white capitalize">{t[gameMode]}</div>
+                            </div>
+                        </div>
+
+                        <button 
+                          onClick={() => { setShowChallengeIntro(false); startGame(false, true); }}
+                          className="w-full py-5 rounded-[2rem] bg-orange-600 hover:bg-orange-500 text-white font-black text-lg flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg"
+                        >
+                          {t.startChallenge} <ChevronRight size={20} />
                         </button>
                     </div>
                   </div>
@@ -1460,6 +1509,11 @@
 
                             {/* Actions */}
                             <div className="flex flex-col w-full gap-3">
+                                {isChallengeCreator && (
+                                    <button onClick={createChallengeLink} className="w-full py-4 rounded-2xl bg-orange-600 hover:bg-orange-500 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 mb-3">
+                                        <Share2 size={18} /> {t.shareChallenge}
+                                    </button>
+                                )}
                                 <button onClick={() => startGame(isDailyChallenge, false)} className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95">
                                     <RotateCcw size={18} /> {t.playAgain}
                                 </button>
@@ -1502,7 +1556,7 @@
                               <button onClick={() => startGame(true)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-5 rounded-[1.5rem] font-black text-xs md:text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95">
                                 <Calendar size={18} /> {t.dailyRace}
                               </button>
-                              <button onClick={() => startGame(false, true)} className="flex-1 bg-orange-600 hover:bg-orange-500 text-white py-5 rounded-[1.5rem] font-black text-xs md:text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95">
+                              <button onClick={() => { setShowChallengeIntro(true); triggerHaptic('light'); }} className="flex-1 bg-orange-600 hover:bg-orange-500 text-white py-5 rounded-[1.5rem] font-black text-xs md:text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95">
                                 <Swords size={18} /> {t.challenge}
                               </button>
                           </div>
