@@ -67,6 +67,10 @@
           mask-image: radial-gradient(circle at center, black, transparent 80%);
         }
         button:focus { outline: none; }
+        /* Scrollbar for legal modal */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
     </style>
 
     <!-- Import Maps -->
@@ -151,13 +155,21 @@
         const TRANSLATIONS = {
           tr: {
             title: "Canım Anam", subtitle: "Hafıza Oyunu", streak: "Gün", score: "Puan",
-            gameMode: "Oyun Modu", gameModeDesc: "Hem konumu, hem de harf sesini (ikili) ya da konum, ses ve rengi takip edin (üçlü).",
-            difficulty: "Zorluk Derecesi (N)", difficultyDesc: "Mevcut uyaranın, N adım önceki uyaranla eşleşip eşleşmediğini bulun.",
-            dailyRace: "Günlük Yarış", dailyRaceDesc: "Her gün herkes için aynı olan sabit diziyle oynayın.",
-            speed: "Oyun Ritmi", trainingMode: "Eğitim Modu",
-            practice: "Alıştırma", practiceDesc: "Süre sınırı yok. Hata yapılabilir.",
-            marathon: "Maraton", marathonDesc: "Hata yapana kadar devam eder.",
-            zenMode: "Zen Modu", zenModeDesc: "Sadece akışa odaklanın.",
+            gameParamsTitle: "OYUN PARAMETRELERİ",
+            gameMode: "OYUN MODU", 
+            gameModeDesc: "Hem konumu, hem de harf sesini (ikili) ya da konum, ses ve rengi takip edin (üçlü).",
+            difficulty: "ZORLUK DERECESİ (N)", 
+            difficultyDesc: "Mevcut uyaranın, N adım önceki uyaranla eşleşip eşleşmediğini bulun.",
+            dailyRace: "Günlük Yarış", 
+            dailyRaceDesc: "Her gün herkes için aynı olan sabit diziyle oynayın ve skorunuzu karşılaştırın.",
+            speed: "OYUN RİTMİ", 
+            trainingMode: "EĞİTİM MODU",
+            practice: "Alıştırma", 
+            practiceDesc: "Süre veya dizi sınırı olmadan, hata yapma korkusu yaşamadan pratik yapın.",
+            marathon: "Maraton", 
+            marathonDesc: "Tek bir hata yapana kadar oyun devam eder. Ne kadar dayanabilirsiniz?",
+            zenMode: "Zen Modu", 
+            zenModeDesc: "Skor, arayüz ve dikkat dağıtıcılar gizlenir. Sadece akışa odaklanın.",
             soundCheck: "Ses Kontrol", startGame: "Oyunu Başlat",
             challenge: "Meydan Oku", challengeDesc: "Arkadaşına özel bir kodla meydan oku.",
             position: "Konum", dual: "İkili", triple: "Üçlü", sound: "Ses", color: "Renk",
@@ -168,7 +180,7 @@
             challengeReady: "Meydan Okuma Hazır", shareLink: "Bağlantıyı Paylaş",
             cancel: "Vazgeç ve Dön", neuralMetrics: "Nöral Metrikler",
             reactionTime: "Tepki Süresi", bestN: "En İyi Zorluk", attentionMap: "Dikkat Eksikliği Haritası",
-            resetData: "TÜM VERİLERİ SIFIRLA", resetConfirm: "Tüm ilerlemeniz, puanlarınız ve geçmişiniz kalıcı olarak silinecektir. Emin misiniz?",
+            resetData: "TÜM VERİLERİ SIFIRLA", resetConfirm: "Tüm verileriniz silinecek. Emin misiniz?",
             shareTitle: "Canım Anam - Zihin Egzersizi", sharePrompt: "🧠 Hafızanı ve odaklanmanı test et! \"Canım Anam\" oyununda kaçıncı seviyeye çıkabilirsin? Hemen oyna:",
             slow: "Yavaş", normal: "Normal", fast: "Hızlı",
             incomingChallenge: "Bir Meydan Okuman Var!", friendScore: "Arkadaşın bu ayarlarda <b>%{score}</b> skor yaptı.",
@@ -185,17 +197,31 @@
             tutorialStep2: "Yeni bir konum işaretlendi. Şimdi bir önceki kareyle karşılaştırma yapacağız.",
             tutorialStep3Match: "N=1 modunda, mevcut kare az önceki kareyle aynı yerdeyse KONUM butonuna basın!",
             tutorialBtn: "KONUM BUTONU", continue: "Devam Et", start: "Başlat",
-            gameParams: "Oyun Parametreleri", standard: "Standart", standardDesc: "20-30 adımlık klasik seans.", playAgain: "Tekrar Oyna"
+            standard: "Standart", standardDesc: "20-30 adımlık klasik seans.", playAgain: "Tekrar Oyna",
+            terms: "Kullanım Koşulları", privacy: "Gizlilik Politikası", rights: "Tüm hakları saklıdır.", close: "Kapat",
+            privacyContent: "Bu uygulama kişisel verilerinizi toplamaz veya harici sunucularda saklamaz. Tüm oyun ilerlemesi, istatistikler ve ayarlar tarayıcınızın yerel depolama alanında (LocalStorage) tutulur. Verilerinizi 'Ayarlar > Verileri Sıfırla' seçeneği ile dilediğiniz zaman silebilirsiniz.",
+            termsContent: "Bu uygulama 'olduğu gibi' sunulmaktadır. Zihinsel egzersiz amaçlıdır ve tıbbi bir tedavi yerine geçmez. Geliştirici, uygulamanın kullanımından doğabilecek sonuçlardan sorumlu değildir.",
+            vibedWith: "Vibed with Gemini",
+            analytics: "Analizler", analyticsDesc: "Performans ve gelişim grafikleri.", noData: "Henüz veri yok.",
+            brainTraining: "Zihin Eğitimi"
           },
           en: {
             title: "Dual N-Backer", subtitle: "Memory Game", streak: "Day Streak", score: "XP",
-            gameMode: "Game Mode", gameModeDesc: "Track position and sound (Dual) or position, sound, and color (Triple).",
-            difficulty: "Difficulty (N-Back)", difficultyDesc: "Identify if the current stimulus matches the one N steps earlier.",
-            dailyRace: "Daily Race", dailyRaceDesc: "Play with a fixed sequence identical for everyone today.",
-            speed: "Speed", trainingMode: "Training Mode",
-            practice: "Practice", practiceDesc: "No time limit. Mistakes allowed.",
-            marathon: "Marathon", marathonDesc: "Continues until a single mistake.",
-            zenMode: "Zen Mode", zenModeDesc: "Focus purely on the flow.",
+            gameParamsTitle: "GAME PARAMETERS",
+            gameMode: "GAME MODE", 
+            gameModeDesc: "Track position and letter sound (dual) or position, sound, and color (triple).",
+            difficulty: "DIFFICULTY LEVEL (N)", 
+            difficultyDesc: "Identify if the current stimulus matches the one N steps earlier.",
+            dailyRace: "Daily Race", 
+            dailyRaceDesc: "Play with a fixed sequence identical for everyone every day and compare your score.",
+            speed: "SPEED", 
+            trainingMode: "TRAINING MODE",
+            practice: "Practice", 
+            practiceDesc: "Practice without time or sequence limits, without the fear of making mistakes.",
+            marathon: "Marathon", 
+            marathonDesc: "The game continues until you make a single mistake. How long can you last?",
+            zenMode: "Zen Mode", 
+            zenModeDesc: "Score, interface, and distractions are hidden. Focus only on the flow.",
             soundCheck: "Sound Check", startGame: "Start the Game",
             challenge: "Challenge", challengeDesc: "Challenge a friend with a custom seed.",
             position: "Position", dual: "Dual", triple: "Triple", sound: "Audio", color: "Color",
@@ -223,7 +249,13 @@
             tutorialStep2: "New position marked. Now we will compare with the previous square.",
             tutorialStep3Match: "In N=1 mode, if the current square is in the same place as the previous one, press POSITION!",
             tutorialBtn: "POSITION BUTTON", continue: "Continue", start: "Start",
-            gameParams: "Game Parameters", standard: "Standard", standardDesc: "Classic 20-30 step session.", playAgain: "Play Again"
+            standard: "Standard", standardDesc: "Classic 20-30 step session.", playAgain: "Play Again",
+            terms: "Terms of Service", privacy: "Privacy Policy", rights: "All rights reserved.", close: "Close",
+            privacyContent: "This application does not collect or store personal data on external servers. All game progress, statistics, and settings are stored locally in your browser's storage (LocalStorage). You can delete your data at any time via 'Settings > Reset Data'.",
+            termsContent: "This application is provided 'as is'. It is intended for mental exercise purposes and does not substitute medical treatment. The developer is not liable for any outcomes resulting from the use of this application.",
+            vibedWith: "Vibed with Gemini",
+            analytics: "Analytics", analyticsDesc: "Performance and growth charts.", noData: "No data yet.",
+            brainTraining: "Brain Training"
           }
         };
 
@@ -537,6 +569,9 @@
           const [challengeSeed, setChallengeSeed] = useState(null);
           const [isChallengeCreator, setIsChallengeCreator] = useState(false);
           const [incomingChallenge, setIncomingChallenge] = useState(null);
+
+          // Legal State
+          const [legalModal, setLegalModal] = useState(null);
 
           const [userStats, setUserStats] = useState({
             xp: 0,
@@ -981,12 +1016,7 @@
           const removeAllProgress = () => {
             if (window.confirm(t.resetConfirm)) {
               localStorage.clear();
-              setUserStats({ xp: 0, streak: 0, lastPlayed: 0, rank: language === 'tr' ? RANKS[0].name : RANKS_EN[0].name, bestN: 1 });
-              setHistory([]);
-              setLevel(1);
-              setGameMode('dual');
-              setGameState('idle');
-              triggerHaptic('error');
+              window.location.reload();
             }
           };
 
@@ -1131,12 +1161,40 @@
           : 0;
 
           const avgReactionTimeSec = (avgReactionTimeMs / 1000).toFixed(2);
+          
+          const currentTrainingDesc = useMemo(() => {
+            if (isPractice) return t.practiceDesc;
+            if (isMarathon) return t.marathonDesc;
+            return t.standardDesc;
+          }, [isPractice, isMarathon, t]);
 
           // Render (copy of App return)
           return (
             <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden select-none pb-[max(env(safe-area-inset-bottom),16px)] pt-[max(env(safe-area-inset-top),16px)]">
               <NeuralMesh combo={isPlaying ? combo : 0} />
               
+              {/* RESTORED TOP HEADER */}
+              {gameState === 'idle' && !showIntro && !tutorialStep && (
+                  <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-50 animate-in fade-in slide-in-from-top-4 duration-700">
+                      <div className="flex gap-3">
+                          <button onClick={startTutorial} className="p-3 bg-slate-800/50 hover:bg-indigo-600 backdrop-blur-md rounded-2xl text-slate-400 hover:text-white transition-all ring-1 ring-white/5 active:scale-95 shadow-lg">
+                              <Info size={20} />
+                          </button>
+                          <button onClick={() => setGameState('analytics')} className="p-3 bg-slate-800/50 hover:bg-emerald-600 backdrop-blur-md rounded-2xl text-slate-400 hover:text-white transition-all ring-1 ring-white/5 active:scale-95 shadow-lg">
+                              <BarChart3 size={20} />
+                          </button>
+                      </div>
+                      <div className="flex gap-2 bg-slate-800/50 backdrop-blur-md p-1.5 rounded-2xl ring-1 ring-white/5 shadow-lg">
+                          <button onClick={() => setSpecificLanguage('tr')} className={`w-8 h-8 rounded-xl overflow-hidden transition-all ${language === 'tr' ? 'ring-2 ring-indigo-500 scale-110 shadow-lg' : 'opacity-40 hover:opacity-100'}`}>
+                              <FlagTR />
+                          </button>
+                          <button onClick={() => setSpecificLanguage('en')} className={`w-8 h-8 rounded-xl overflow-hidden transition-all ${language === 'en' ? 'ring-2 ring-indigo-500 scale-110 shadow-lg' : 'opacity-40 hover:opacity-100'}`}>
+                              <FlagUK />
+                          </button>
+                      </div>
+                  </div>
+              )}
+
               {/* Incoming Challenge Modal */}
               {incomingChallenge && gameState === 'idle' && !tutorialStep && !showIntro && (
                 <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in zoom-in duration-300">
@@ -1179,11 +1237,88 @@
                 </div>
               )}
 
+              {/* Legal Modal */}
+              {legalModal && (
+                  <div className="fixed inset-0 z-[150] bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in zoom-in duration-300">
+                    <div className="bg-slate-900 border border-white/10 p-8 rounded-[2rem] shadow-2xl max-w-md w-full relative flex flex-col max-h-[90vh]">
+                      <button onClick={() => setLegalModal(null)} className="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors">
+                        <XCircle size={24} />
+                      </button>
+                      <h2 className="text-2xl font-black text-white mb-6 shrink-0">
+                        {legalModal === 'terms' ? t.terms : t.privacy}
+                      </h2>
+                      <div className="text-slate-400 text-sm leading-relaxed space-y-4 overflow-y-auto pr-2 custom-scrollbar">
+                        <p>{legalModal === 'terms' ? t.termsContent : t.privacyContent}</p>
+                      </div>
+                      <button 
+                        onClick={() => setLegalModal(null)}
+                        className="w-full mt-6 py-4 rounded-xl bg-slate-800 text-white font-bold text-sm hover:bg-slate-700 transition-colors shrink-0"
+                      >
+                        {t.close}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              
+              {/* Analytics View */}
+              {gameState === 'analytics' && (
+                  <div className="fixed inset-0 z-[120] bg-slate-950/90 backdrop-blur-xl flex flex-col items-center p-6 animate-in fade-in zoom-in duration-300 overflow-y-auto">
+                     <div className="w-full max-w-lg space-y-6 pb-12">
+                         <div className="flex justify-between items-center">
+                            <h2 className="text-3xl font-black text-white">{t.analytics}</h2>
+                            <button onClick={() => setGameState('idle')} className="p-3 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors">
+                                <XCircle size={24} className="text-white" />
+                            </button>
+                         </div>
+                         
+                         {/* High Level Stats */}
+                         <div className="grid grid-cols-2 gap-4">
+                             <div className="bg-slate-900/50 p-5 rounded-3xl border border-white/5 flex flex-col items-center text-center">
+                                 <div className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">{t.bestN}</div>
+                                 <div className="text-4xl font-black text-indigo-400">N-{userStats.bestN}</div>
+                             </div>
+                             <div className="bg-slate-900/50 p-5 rounded-3xl border border-white/5 flex flex-col items-center text-center">
+                                 <div className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">{t.score}</div>
+                                 <div className="text-4xl font-black text-yellow-400">{userStats.xp}</div>
+                             </div>
+                         </div>
+                         
+                         {/* Reaction Time */}
+                         <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5">
+                             <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Zap size={16} className="text-orange-400"/> {t.reactionTime}</h3>
+                             <div className="text-center py-4">
+                                 <div className="text-5xl font-black text-white">{avgReactionTimeSec}<span className="text-lg text-slate-500 ml-1">s</span></div>
+                                 <div className="text-xs text-slate-500 mt-2">Average response speed</div>
+                             </div>
+                         </div>
+
+                         {/* Heatmap */}
+                         <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5">
+                             <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2"><Target size={16} className="text-rose-400"/> {t.attentionMap}</h3>
+                             <div className="grid grid-cols-3 gap-2 aspect-square max-w-[200px] mx-auto">
+                                {missedHeatmap.map((count, i) => (
+                                    <div key={i} className="rounded-lg aspect-square flex items-center justify-center text-xs font-bold transition-all" 
+                                         style={{ backgroundColor: `rgba(244, 63, 94, ${count / maxMiss})`, color: count > maxMiss/2 ? 'white' : 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                        {count > 0 ? count : ''}
+                                    </div>
+                                ))}
+                             </div>
+                         </div>
+                         
+                         {/* Data Reset */}
+                         <div className="pt-8">
+                             <button onClick={removeAllProgress} className="w-full py-4 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-bold text-sm border border-rose-500/20 flex items-center justify-center gap-2 transition-all">
+                                <Trash2 size={16} /> {t.resetData}
+                             </button>
+                         </div>
+                     </div>
+                  </div>
+              )}
+
               {showIntro && (
                 <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in zoom-in duration-300">
                     <div className="bg-slate-900/80 border border-indigo-500/30 p-8 rounded-[3rem] shadow-2xl max-w-md w-full relative">
                       <div className="flex flex-col items-center relative">
-                         {/* Language Toggle in Intro */}
                          <div className="absolute top-0 right-0 flex gap-2">
                             <button onClick={() => setSpecificLanguage('tr')} className={`w-8 h-8 rounded-full overflow-hidden transition-all ring-2 ${language === 'tr' ? 'ring-indigo-500 scale-110' : 'ring-white/10 opacity-50 hover:opacity-100'}`}>
                                 <FlagTR />
@@ -1225,7 +1360,7 @@
                        </div>
                        <div className="space-y-4 text-center mb-8">
                         <h2 className="text-3xl font-black text-white leading-tight">
-                          {tutorialStep === 'welcome' ? t.tutorialWelcome : tutorialStep === 'ready' ? t.tutorialReady : 'Zihin Eğitimi'}
+                          {tutorialStep === 'welcome' ? t.tutorialWelcome : tutorialStep === 'ready' ? t.tutorialReady : t.brainTraining}
                         </h2>
                         <div className="text-slate-400 text-sm leading-relaxed px-2">
                           {tutorialStep === 'welcome' && t.tutorialWelcomeText}
@@ -1264,9 +1399,22 @@
                 </div>
               )}
 
-              <div className={`max-w-xl w-full relative z-10 transition-all duration-700 flex flex-col ${isZenMode && isPlaying ? 'gap-0 min-h-[85vh] justify-center items-center' : 'gap-4'}`}>
+              <div className={`max-w-xl w-full relative z-10 transition-all duration-700 flex flex-col ${isZenMode && isPlaying ? 'gap-0 min-h-[85vh] justify-center items-center' : 'gap-4 pt-16'}`}>
                 
-                {!isPlaying && gameState !== 'finished' && (
+                {/* IDLE TITLE - Restored Header */}
+                {gameState === 'idle' && (
+                  <div className="text-center mb-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <h1 className="text-4xl md:text-6xl font-black text-white tracking-tighter mb-2">
+                      {t.title}
+                    </h1>
+                    <p className="text-indigo-400 font-bold uppercase tracking-[0.3em] text-[10px] md:text-xs">
+                      {t.subtitle}
+                    </p>
+                  </div>
+                )}
+
+                {/* STATS BAR - Hide in Zen Mode Playing */}
+                {(!isZenMode || !isPlaying) && gameState !== 'finished' && gameState !== 'analytics' && (
                   <div className="flex items-center justify-between px-2 mb-2 animate-in slide-in-from-top-4 duration-500 w-full">
                      <div className="flex items-center gap-3 bg-slate-900/40 backdrop-blur-xl border border-white/5 py-2 px-4 rounded-2xl">
                         <Flame className={`text-orange-500 ${userStats.streak > 0 ? 'fill-orange-500 animate-pulse' : ''}`} size={20} />
@@ -1279,6 +1427,7 @@
                   </div>
                 )}
 
+                {/* FINISHED SCREEN */}
                 {gameState === 'finished' && scoreDetails && (
                     <div className="w-full max-w-md animate-in fade-in zoom-in duration-300 m-auto">
                         <div className="bg-slate-900/40 backdrop-blur-xl border border-white/10 p-8 rounded-[3rem] shadow-2xl flex flex-col items-center text-center">
@@ -1322,70 +1471,11 @@
                     </div>
                 )}
 
-                {(!isZenMode || !isPlaying) && gameState !== 'finished' && gameState !== 'analytics' && (
+                {/* GAME CONTAINER - Restructured for Zen Mode */}
+                {gameState !== 'finished' && gameState !== 'analytics' && (
                   <div className={`transition-all duration-700 w-full flex flex-col items-center ${isZenMode && isPlaying ? 'bg-transparent' : 'bg-slate-900/30 backdrop-blur-3xl border border-white/10 rounded-[2rem] sm:rounded-[3rem] p-5 sm:p-8 shadow-2xl'}`}>
                     
-                    {gameState === 'idle' && (
-                      <div className="space-y-6 mb-8 animate-in fade-in duration-500 w-full">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 items-stretch">
-                          <div className="flex flex-col space-y-2 h-full">
-                            <label className="text-[11px] md:text-xs font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-2">
-                              <Target size={14} className="text-indigo-500" /> {t.difficulty}
-                            </label>
-                            <div className="flex flex-1 p-1.5 bg-slate-800/40 rounded-2xl border border-white/5">
-                              {[1, 2, 3, 4, 5].map((l) => (
-                                <button key={l} onClick={() => { setLevel(l); triggerHaptic('light'); }} className={`flex-1 py-2 rounded-xl font-black text-sm md:text-base transition-all active:scale-90 ${level === l ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:text-white'}`}>{l}</button>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="flex flex-col space-y-2 h-full">
-                            <label className="text-[11px] md:text-xs font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-2">
-                              <Palette size={14} className="text-purple-500" /> {t.gameMode}
-                            </label>
-                            <div className="flex flex-1 p-1.5 bg-slate-800/40 rounded-2xl border border-white/5">
-                              {['position', 'dual', 'triple'].map((m) => (
-                                <button key={m} onClick={() => { setGameMode(m); triggerHaptic('light'); }} className={`flex-1 min-w-0 py-2 rounded-xl font-black text-[10px] md:text-xs transition-all active:scale-90 ${gameMode === m ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400'}`}>
-                                  {t[m]}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 items-stretch">
-                          <div className="flex flex-col space-y-2 h-full">
-                            <label className="text-[11px] md:text-xs font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-2">
-                              <Gauge size={14} className="text-yellow-500" /> {t.speed}
-                            </label>
-                            <div className="flex flex-1 p-1.5 bg-slate-800/40 rounded-2xl border border-white/5">
-                              {['slow', 'normal', 'fast'].map((s) => (
-                                <button key={s} onClick={() => { setSpeed(s); triggerHaptic('light'); }} className={`flex-1 py-2 rounded-xl font-black text-[10px] md:text-xs transition-all active:scale-90 ${speed === s ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400'}`}>
-                                  {t[s]}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="flex flex-col space-y-2 h-full">
-                            <label className="text-[11px] md:text-xs font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-2">
-                              <TrendingUp size={14} className="text-emerald-500" /> {t.trainingMode}
-                            </label>
-                            <div className="flex flex-1 p-1.5 bg-slate-800/40 rounded-2xl border border-white/5 gap-1">
-                              <button onClick={() => { setIsPractice(false); setIsMarathon(false); triggerHaptic('light'); }} className={`flex-1 py-2 rounded-xl font-black text-[10px] md:text-xs transition-all active:scale-90 ${!isPractice && !isMarathon ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-400'}`}>{t.standard}</button>
-                              <button onClick={() => { setIsPractice(true); setIsMarathon(false); triggerHaptic('light'); }} className={`flex-1 py-2 rounded-xl font-black text-[10px] md:text-xs transition-all active:scale-90 ${isPractice ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-400'}`}>{t.practice}</button>
-                              <button onClick={() => { setIsMarathon(true); setIsPractice(false); triggerHaptic('light'); }} className={`flex-1 py-2 rounded-xl font-black text-[10px] md:text-xs transition-all active:scale-90 ${isMarathon ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20' : 'text-slate-400'}`}>{t.marathon}</button>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex gap-4">
-                          <button onClick={() => setIsZenMode(!isZenMode)} className={`flex-1 py-4 rounded-2xl font-black text-xs md:text-sm flex items-center justify-center gap-2 transition-all active:scale-95 border ${isZenMode ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-200' : 'bg-slate-800/30 border-white/5 text-slate-400'}`}>
-                            <EyeOff size={16} /> {t.zenMode}
-                          </button>
-                          <button onClick={testSound} className="flex-1 py-4 rounded-2xl font-black text-xs md:text-sm flex items-center justify-center gap-2 transition-all active:scale-95 border bg-slate-800/30 border-white/5 text-slate-400">
-                            <Volume2 size={16} /> {t.soundCheck}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
+                    {/* GRID - Visible in Idle AND Playing (regardless of Zen Mode) */}
                     {(gameState === 'idle' || gameState === 'playing') && (
                       <div className={`relative flex justify-center transition-all duration-700 ${isZenMode && isPlaying ? 'flex-1 items-center mb-0' : 'mb-8'} w-full`}>
                          <div className={`grid grid-cols-3 gap-4 aspect-square w-full transition-all duration-500 ${isZenMode && isPlaying ? 'w-full max-w-[min(90vw,60vh)] p-8 bg-transparent' : 'max-w-[420px] md:max-w-[500px] p-5 bg-slate-950/40 rounded-[3rem] border-2 border-white/5 shadow-2xl'} ${isPlaying && !isZenMode ? 'border-indigo-500/30 ring-8 ring-indigo-500/5 shadow-[0_0_30px_rgba(99,102,241,0.1)]' : ''}`}>
@@ -1400,6 +1490,7 @@
                       </div>
                     )}
 
+                    {/* STANDARD CONTROLS - Hide in Zen Mode Playing */}
                     <div className={`transition-all duration-500 w-full ${isZenMode && isPlaying ? 'hidden' : 'max-w-[420px] flex flex-col items-center px-4'}`}>
                       {gameState === 'idle' && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full">
@@ -1417,6 +1508,148 @@
                           </div>
                         </div>
                       )}
+
+                       {/* SETTINGS PARAMETERS - Clean Buttons */}
+                      {gameState === 'idle' && (
+                        <div className="space-y-6 mt-8 animate-in fade-in duration-500 w-full border-t border-white/5 pt-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 items-stretch">
+                                <div className="flex flex-col space-y-2 h-full">
+                                    <label className="text-[11px] md:text-xs font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-2">
+                                    <Target size={14} className="text-indigo-500" /> {t.difficulty}
+                                    </label>
+                                    <div className="flex flex-1 p-1.5 bg-slate-800/40 rounded-2xl border border-white/5">
+                                    {[1, 2, 3, 4, 5].map((l) => (
+                                        <button key={l} onClick={() => { setLevel(l); triggerHaptic('light'); }} className={`flex-1 py-2 rounded-xl font-black text-sm md:text-base transition-all active:scale-90 ${level === l ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:text-white'}`}>{l}</button>
+                                    ))}
+                                    </div>
+                                </div>
+                                <div className="flex flex-col space-y-2 h-full">
+                                    <label className="text-[11px] md:text-xs font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-2">
+                                    <Palette size={14} className="text-purple-500" /> {t.gameMode}
+                                    </label>
+                                    <div className="flex flex-1 p-1.5 bg-slate-800/40 rounded-2xl border border-white/5">
+                                    {['position', 'dual', 'triple'].map((m) => (
+                                        <button key={m} onClick={() => { setGameMode(m); triggerHaptic('light'); }} className={`flex-1 min-w-0 py-2 rounded-xl font-black text-[10px] md:text-xs transition-all active:scale-90 ${gameMode === m ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400'}`}>
+                                        {t[m]}
+                                        </button>
+                                    ))}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 items-stretch">
+                                <div className="flex flex-col space-y-2 h-full">
+                                    <label className="text-[11px] md:text-xs font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-2">
+                                    <Gauge size={14} className="text-yellow-500" /> {t.speed}
+                                    </label>
+                                    <div className="flex flex-1 p-1.5 bg-slate-800/40 rounded-2xl border border-white/5">
+                                    {['slow', 'normal', 'fast'].map((s) => (
+                                        <button key={s} onClick={() => { setSpeed(s); triggerHaptic('light'); }} className={`flex-1 py-2 rounded-xl font-black text-[10px] md:text-xs transition-all active:scale-90 ${speed === s ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400'}`}>
+                                        {t[s]}
+                                        </button>
+                                    ))}
+                                    </div>
+                                </div>
+                                <div className="flex flex-col space-y-2 h-full">
+                                    <label className="text-[11px] md:text-xs font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-2">
+                                    <TrendingUp size={14} className="text-emerald-500" /> {t.trainingMode}
+                                    </label>
+                                    <div className="flex flex-1 p-1.5 bg-slate-800/40 rounded-2xl border border-white/5 gap-1">
+                                    <button onClick={() => { setIsPractice(false); setIsMarathon(false); triggerHaptic('light'); }} className={`flex-1 py-2 rounded-xl font-black text-[10px] md:text-xs transition-all active:scale-90 ${!isPractice && !isMarathon ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-400'}`}>{t.standard}</button>
+                                    <button onClick={() => { setIsPractice(true); setIsMarathon(false); triggerHaptic('light'); }} className={`flex-1 py-2 rounded-xl font-black text-[10px] md:text-xs transition-all active:scale-90 ${isPractice ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-400'}`}>{t.practice}</button>
+                                    <button onClick={() => { setIsMarathon(true); setIsPractice(false); triggerHaptic('light'); }} className={`flex-1 py-2 rounded-xl font-black text-[10px] md:text-xs transition-all active:scale-90 ${isMarathon ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20' : 'text-slate-400'}`}>{t.marathon}</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex gap-4">
+                            <button onClick={() => setIsZenMode(!isZenMode)} className={`flex-1 py-4 rounded-2xl font-black text-xs md:text-sm flex items-center justify-center gap-2 transition-all active:scale-95 border ${isZenMode ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-200' : 'bg-slate-800/30 border-white/5 text-slate-400'}`}>
+                                <EyeOff size={16} /> {t.zenMode}
+                            </button>
+                            <button onClick={testSound} className="flex-1 py-4 rounded-2xl font-black text-xs md:text-sm flex items-center justify-center gap-2 transition-all active:scale-95 border bg-slate-800/30 border-white/5 text-slate-400">
+                                <Volume2 size={16} /> {t.soundCheck}
+                            </button>
+                            </div>
+                        </div>
+                        )}
+
+                        {/* GAME PARAMETERS INFO GRID (NEW) */}
+                        {gameState === 'idle' && (
+                          <div className="mt-12 w-full max-w-2xl bg-slate-900/40 rounded-[2.5rem] p-8 border border-white/5 animate-in fade-in duration-700">
+                              <h3 className="flex items-center gap-3 text-sm md:text-base font-black text-slate-300 uppercase tracking-widest mb-8">
+                                  <Info size={18} className="text-indigo-500" /> {t.gameParamsTitle}
+                              </h3>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-8">
+                                  <div className="flex gap-4 items-start">
+                                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-white/5">
+                                          <Palette size={18} className="text-indigo-400" />
+                                      </div>
+                                      <div>
+                                          <h4 className="font-black text-sm text-white mb-1 uppercase">{t.gameMode}</h4>
+                                          <p className="text-xs text-slate-400 leading-relaxed">{t.gameModeDesc}</p>
+                                      </div>
+                                  </div>
+
+                                  <div className="flex gap-4 items-start">
+                                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-white/5">
+                                          <TrendingUp size={18} className="text-emerald-400" />
+                                      </div>
+                                      <div>
+                                          <h4 className="font-black text-sm text-white mb-1 uppercase">{t.practice}</h4>
+                                          <p className="text-xs text-slate-400 leading-relaxed">{t.practiceDesc}</p>
+                                      </div>
+                                  </div>
+
+                                  <div className="flex gap-4 items-start">
+                                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-white/5">
+                                          <Target size={18} className="text-blue-400" />
+                                      </div>
+                                      <div>
+                                          <h4 className="font-black text-sm text-white mb-1 uppercase">{t.difficulty}</h4>
+                                          <p className="text-xs text-slate-400 leading-relaxed">{t.difficultyDesc}</p>
+                                      </div>
+                                  </div>
+
+                                  <div className="flex gap-4 items-start">
+                                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-white/5">
+                                          <Zap size={18} className="text-rose-400" />
+                                      </div>
+                                      <div>
+                                          <h4 className="font-black text-sm text-white mb-1 uppercase">{t.marathon}</h4>
+                                          <p className="text-xs text-slate-400 leading-relaxed">{t.marathonDesc}</p>
+                                      </div>
+                                  </div>
+
+                                  <div className="flex gap-4 items-start">
+                                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-white/5">
+                                          <Calendar size={18} className="text-emerald-400" />
+                                      </div>
+                                      <div>
+                                          <h4 className="font-black text-sm text-white mb-1 uppercase">{t.dailyRace}</h4>
+                                          <p className="text-xs text-slate-400 leading-relaxed">{t.dailyRaceDesc}</p>
+                                      </div>
+                                  </div>
+
+                                  <div className="flex gap-4 items-start">
+                                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-white/5">
+                                          <EyeOff size={18} className="text-slate-400" />
+                                      </div>
+                                      <div>
+                                          <h4 className="font-black text-sm text-white mb-1 uppercase">{t.zenMode}</h4>
+                                          <p className="text-xs text-slate-400 leading-relaxed">{t.zenModeDesc}</p>
+                                      </div>
+                                  </div>
+
+                                  <div className="flex gap-4 items-start">
+                                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-white/5">
+                                          <Swords size={18} className="text-orange-400" />
+                                      </div>
+                                      <div>
+                                          <h4 className="font-black text-sm text-white mb-1 uppercase">{t.challenge}</h4>
+                                          <p className="text-xs text-slate-400 leading-relaxed">{t.challengeDesc}</p>
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+                        )}
 
                       {gameState === 'playing' && (
                         <div className="space-y-6 w-full">
@@ -1480,7 +1713,8 @@
                         </div>
                       )}
                     </div>
-                    {/* Zen Mode Buttons fixed at bottom of screen if playing */}
+                    
+                    {/* ZEN MODE FIXED CONTROLS */}
                     {isZenMode && isPlaying && (
                          <div className="fixed bottom-0 left-0 right-0 p-8 flex justify-center gap-6 pb-12 z-50">
                             <button 
@@ -1513,6 +1747,20 @@
                             <ZapOff size={20} />
                         </button>
                      )}
+                  </div>
+                )}
+
+                 {/* FOOTER */}
+                 {gameState === 'idle' && (
+                  <div className="mt-8 text-center space-y-2 animate-in fade-in duration-700 delay-300">
+                    <div className="flex items-center justify-center gap-4 text-[10px] md:text-xs text-slate-500 font-medium">
+                      <button onClick={() => setLegalModal('terms')} className="hover:text-slate-300 transition-colors underline decoration-slate-700 underline-offset-4">{t.terms}</button>
+                      <span className="w-1 h-1 rounded-full bg-slate-700"></span>
+                      <button onClick={() => setLegalModal('privacy')} className="hover:text-slate-300 transition-colors underline decoration-slate-700 underline-offset-4">{t.privacy}</button>
+                    </div>
+                    <p className="text-[10px] text-slate-600">
+                      &copy; {new Date().getFullYear()} {t.title}. {t.rights} • {t.vibedWith}
+                    </p>
                   </div>
                 )}
               </div>
