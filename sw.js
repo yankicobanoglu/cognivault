@@ -1,4 +1,3 @@
-
 const CACHE_NAME = 'cognivault-v12';
 const ASSETS = [
   './',

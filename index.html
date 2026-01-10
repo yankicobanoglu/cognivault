@@ -732,24 +732,7 @@
             triggerHaptic('medium');
           };
 
-          const handleKeyDown = useCallback((e) => {
-            if (gameState !== 'playing') return;
-            const key = e.key.toLowerCase();
-            if (key === 'a') handlePositionClick();
-            if (key === 'l') handleSoundClick();
-            if (key === 's' && gameMode === 'triple') handleColorClick();
-          }, [gameState, gameMode]); // Added deps to be safe
-
-          // Need to update the ref/closure for handles
-          // However, using Refs for inputs (userPositionInputs) means callbacks are stable-ish
-          // But 'currentIndex', 'level' etc are needed inside handlers.
-          // Let's rely on standard state access if possible or Refs.
-          // Actually, strict closure might be an issue if we don't update listeners.
-          // Simpler: Just add dependency.
-          useEffect(() => {
-            window.addEventListener('keydown', handleKeyDown);
-            return () => window.removeEventListener('keydown', handleKeyDown);
-          }, [handleKeyDown]);
+          // NOTE: Keyboard handlers are initialized below the specific click handlers to ensure correct closure access.
 
           const calculateScoreForModality = (inputs, matches, limitIndex) => {
             const relevantMatches = matches.filter(m => m < limitIndex);
@@ -1002,6 +985,29 @@
               if (isMarathon) finishGame();
             }
           };
+
+          // --- KEYBOARD LISTENER IMPLEMENTATION ---
+          const handleKeyDownRef = useRef(null);
+          
+          // Update ref on every render to ensure we always have the latest state (currentIndex, matches, etc.)
+          // This avoids the stale closure problem that was breaking keyboard input.
+          useEffect(() => {
+            handleKeyDownRef.current = (e) => {
+                if (gameState !== 'playing') return;
+                const key = e.key.toLowerCase();
+                if (key === 'a') handlePositionClick();
+                if (key === 'l') handleSoundClick();
+                if (key === 's' && gameMode === 'triple') handleColorClick();
+            };
+          });
+
+          useEffect(() => {
+            const listener = (e) => {
+                if(handleKeyDownRef.current) handleKeyDownRef.current(e);
+            };
+            window.addEventListener('keydown', listener);
+            return () => window.removeEventListener('keydown', listener);
+          }, []);
           
           const recordReactionTime = () => {
             if (currentStimulusStartTime.current > 0) {
