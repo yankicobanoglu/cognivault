@@ -278,37 +278,40 @@
           }
         };
 
+        const unlockSpeech = () => {
+          const synth = window.speechSynthesis;
+          const utterance = new SpeechSynthesisUtterance(' ');
+          utterance.volume = 0.01;
+          synth.speak(utterance);
+        };
+
         const speakLetter = (letter, lang, voice) => {
           const synth = window.speechSynthesis;
-          resumeAudio();
           synth.cancel();
 
-          setTimeout(() => {
-            let rate = 0.8; 
-            let text = letter.toLowerCase();
-            let langCode = lang === 'tr' ? 'tr-TR' : 'en-US';
+          let rate = 0.8;
+          let text = letter.toLowerCase();
+          let langCode = lang === 'tr' ? 'tr-TR' : 'en-US';
 
-            if (lang === 'tr') {
-               if (['A', 'O', 'U'].includes(letter)) rate = 0.85;
-               else if (['E', 'İ'].includes(letter)) rate = 0.8;
-               text = PHONETIC_MAP_TR[letter] || letter.toLowerCase();
-            } else {
-               rate = 0.9;
-            }
+          if (lang === 'tr') {
+             if (['A', 'O', 'U'].includes(letter)) rate = 0.85;
+             else if (['E', 'İ'].includes(letter)) rate = 0.8;
+             text = PHONETIC_MAP_TR[letter] || letter.toLowerCase();
+          } else {
+             rate = 0.9;
+          }
 
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = langCode;
-            if (voice) utterance.voice = voice;
-            utterance.rate = rate;
-            utterance.volume = 1.0;
-            utterance.pitch = 1.0;
-            utterance.onerror = (e) => {
-              console.warn("Speech error:", e);
-              synth.cancel();
-              resumeAudio();
-            };
-            synth.speak(utterance);
-          }, 50);
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = langCode;
+          if (voice) utterance.voice = voice;
+          utterance.rate = rate;
+          utterance.volume = 1.0;
+          utterance.pitch = 1.0;
+          utterance.onerror = (e) => {
+            console.warn("Speech error:", e);
+            synth.cancel();
+          };
+          synth.speak(utterance);
         };
 
         const loadVoices = (lang, callback) => {
@@ -818,6 +821,7 @@
           }, [calculateFinalScore, level, gameMode, isDailyChallenge, userStats, speed, sequence, positionMatches]);
 
           const startGame = (isDaily = false, isChallengeCreation = false) => {
+            unlockSpeech();
             setIsDailyChallenge(isDaily);
             setIsChallengeCreator(isChallengeCreation);
             
@@ -908,6 +912,14 @@
             const timerId = setTimeout(playNextStimulus, SPEED_SETTINGS[speed]);
             return () => clearTimeout(timerId);
           }, [isPlaying, gameState, playNextStimulus, speed]);
+
+          useEffect(() => {
+            if (!isPlaying || gameState !== 'playing') return;
+            const resumeId = setInterval(() => {
+              resumeAudio();
+            }, 3000);
+            return () => clearInterval(resumeId);
+          }, [isPlaying, gameState]);
 
           const handlePositionClick = () => {
             if (tutorialStep === 'demo_step_3') {
